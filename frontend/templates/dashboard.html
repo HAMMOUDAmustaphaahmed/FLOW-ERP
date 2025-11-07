@@ -1,0 +1,519 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - FlowERP{% endblock %}
+
+{% block extra_css %}
+<style>
+.dashboard-header {
+    margin-bottom: 2rem;
+}
+
+.dashboard-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.dashboard-subtitle {
+    color: var(--text-secondary);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+    transition: transform var(--transition-fast);
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.stat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+}
+
+.stat-icon.blue {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.stat-icon.green {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.stat-icon.purple {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
+.stat-icon.orange {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0.5rem 0;
+}
+
+.stat-change {
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.stat-change.positive {
+    color: var(--success-color);
+}
+
+.stat-change.negative {
+    color: var(--error-color);
+}
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.chart-card {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+}
+
+.chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.chart-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.chart-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-icon {
+    padding: 0.5rem;
+    border: none;
+    background: var(--bg-tertiary);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all var(--transition-fast);
+}
+
+.btn-icon:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.recent-activity {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+}
+
+.activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--border-radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.activity-icon.create {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+}
+
+.activity-icon.update {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--primary-color);
+}
+
+.activity-icon.delete {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error-color);
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-title {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.activity-time {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.blockchain-status-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+}
+
+.blockchain-status-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.blockchain-icon {
+    font-size: 2rem;
+}
+
+.blockchain-info {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.blockchain-stat {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+}
+
+.blockchain-stat-label {
+    font-size: 0.875rem;
+    opacity: 0.9;
+    margin-bottom: 0.25rem;
+}
+
+.blockchain-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1 class="dashboard-title">
+        Bienvenue, {{ current_user.first_name or current_user.username }} 👋
+    </h1>
+    <p class="dashboard-subtitle">Voici un aperçu de votre système ERP</p>
+</div>
+
+<!-- Statistiques principales -->
+<div class="stats-grid" id="statsGrid">
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon blue">
+                <i class="fas fa-building"></i>
+            </div>
+        </div>
+        <div class="stat-label">Départements</div>
+        <div class="stat-value" id="departmentCount">0</div>
+        <div class="stat-change positive">
+            <i class="fas fa-arrow-up"></i>
+            <span>Actifs</span>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon green">
+                <i class="fas fa-users"></i>
+            </div>
+        </div>
+        <div class="stat-label">Employés</div>
+        <div class="stat-value" id="employeeCount">0</div>
+        <div class="stat-change positive">
+            <i class="fas fa-arrow-up"></i>
+            <span>Enregistrés</span>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon purple">
+                <i class="fas fa-cube"></i>
+            </div>
+        </div>
+        <div class="stat-label">Blocs Blockchain</div>
+        <div class="stat-value" id="blockchainBlocks">0</div>
+        <div class="stat-change positive">
+            <i class="fas fa-check-circle"></i>
+            <span>Validés</span>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon orange">
+                <i class="fas fa-chart-line"></i>
+            </div>
+        </div>
+        <div class="stat-label">Transactions</div>
+        <div class="stat-value" id="transactionCount">0</div>
+        <div class="stat-change positive">
+            <i class="fas fa-arrow-up"></i>
+            <span>Ce mois</span>
+        </div>
+    </div>
+</div>
+
+<!-- Blockchain Status -->
+<div class="blockchain-status-card">
+    <div class="blockchain-status-header">
+        <i class="fas fa-link blockchain-icon"></i>
+        <div>
+            <h3>État de la Blockchain</h3>
+            <p style="opacity: 0.9; font-size: 0.875rem;">Système décentralisé actif</p>
+        </div>
+    </div>
+    <div class="blockchain-info" id="blockchainInfo">
+        <div class="blockchain-stat">
+            <div class="blockchain-stat-label">Difficulté</div>
+            <div class="blockchain-stat-value" id="blockchainDifficulty">4</div>
+        </div>
+        <div class="blockchain-stat">
+            <div class="blockchain-stat-label">Nœuds</div>
+            <div class="blockchain-stat-value" id="blockchainNodes">1</div>
+        </div>
+        <div class="blockchain-stat">
+            <div class="blockchain-stat-label">Dernier Bloc</div>
+            <div class="blockchain-stat-value" id="lastBlockTime">--</div>
+        </div>
+        <div class="blockchain-stat">
+            <div class="blockchain-stat-label">Intégrité</div>
+            <div class="blockchain-stat-value" id="blockchainValid">
+                <i class="fas fa-check-circle"></i> Valide
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graphiques -->
+<div class="charts-grid" style="margin-top: 2rem;">
+    <div class="chart-card">
+        <div class="chart-header">
+            <h3 class="chart-title">Activité par Département</h3>
+            <div class="chart-actions">
+                <button class="btn-icon" title="Rafraîchir">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button class="btn-icon" title="Exporter">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+        </div>
+        <canvas id="departmentChart"></canvas>
+    </div>
+
+    <div class="chart-card">
+        <div class="chart-header">
+            <h3 class="chart-title">Transactions Blockchain</h3>
+            <div class="chart-actions">
+                <button class="btn-icon" title="Rafraîchir">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button class="btn-icon" title="Exporter">
+                    <i class="fas fa-download"></i>
+                </button>
+            </div>
+        </div>
+        <canvas id="transactionChart"></canvas>
+    </div>
+</div>
+
+<!-- Activité récente -->
+<div class="recent-activity">
+    <div class="chart-header">
+        <h3 class="chart-title">Activité Récente</h3>
+        <a href="#" class="btn btn-sm btn-secondary">Voir tout</a>
+    </div>
+    <div id="recentActivity">
+        <div class="activity-item">
+            <div class="activity-icon create">
+                <i class="fas fa-plus"></i>
+            </div>
+            <div class="activity-content">
+                <div class="activity-title">Nouveau département créé</div>
+                <div class="activity-time">Il y a 2 heures</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Charger les données du dashboard
+async function loadDashboardData() {
+    try {
+        // Charger les stats blockchain
+        const blockchainStats = await fetch('/api/blockchain/stats');
+        if (blockchainStats.ok) {
+            const data = await blockchainStats.json();
+            updateBlockchainStats(data);
+        }
+
+        // Charger les stats de l'entreprise
+        if ({{ current_user.company_id }}) {
+            const companyStats = await fetch('/company/stats/{{ current_user.company_id }}');
+            if (companyStats.ok) {
+                const data = await companyStats.json();
+                updateCompanyStats(data.stats);
+            }
+        }
+        
+        // Initialiser les graphiques
+        initializeCharts();
+    } catch (error) {
+        console.error('Erreur lors du chargement des données:', error);
+    }
+}
+
+function updateBlockchainStats(stats) {
+    document.getElementById('blockchainBlocks').textContent = stats.total_blocks;
+    document.getElementById('transactionCount').textContent = stats.total_transactions;
+    document.getElementById('blockchainDifficulty').textContent = stats.difficulty;
+    document.getElementById('blockchainNodes').textContent = stats.nodes_count;
+    
+    const lastTime = new Date(stats.last_block_time);
+    document.getElementById('lastBlockTime').textContent = lastTime.toLocaleTimeString('fr-FR');
+    
+    const validIcon = stats.is_valid ? 
+        '<i class="fas fa-check-circle"></i> Valide' : 
+        '<i class="fas fa-times-circle"></i> Invalide';
+    document.getElementById('blockchainValid').innerHTML = validIcon;
+}
+
+function updateCompanyStats(stats) {
+    document.getElementById('departmentCount').textContent = stats.departments_count;
+    document.getElementById('employeeCount').textContent = stats.users_count;
+}
+
+function initializeCharts() {
+    // Graphique des départements
+    const deptCtx = document.getElementById('departmentChart').getContext('2d');
+    new Chart(deptCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['IT', 'RH', 'Achats', 'Ventes', 'Finance'],
+            datasets: [{
+                data: [30, 20, 15, 25, 10],
+                backgroundColor: [
+                    '#3b82f6',
+                    '#10b981',
+                    '#f59e0b',
+                    '#8b5cf6',
+                    '#ef4444'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Graphique des transactions
+    const txCtx = document.getElementById('transactionChart').getContext('2d');
+    new Chart(txCtx, {
+        type: 'line',
+        data: {
+            labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
+            datasets: [{
+                label: 'Transactions',
+                data: [12, 19, 15, 25, 22, 18, 20],
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// Charger les données au chargement de la page
+document.addEventListener('DOMContentLoaded', loadDashboardData);
+</script>
+{% endblock %}

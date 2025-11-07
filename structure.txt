@@ -1,0 +1,21 @@
+FlowERP/
+├── backend/
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── department.py
+│   ├── routes/
+│   │   ├── __init__.py
+│   │   └── dashboard.py
+│   ├── utils/
+│   │   ├── __init__.py
+│   │   └── blockchain_sync.py
+│   └── .txt
+├── frontend/
+│   ├── static/
+│   │   └── js/
+│   │       └── chart.js
+│   └── templates/
+│       ├── company_setup.html
+│       └── department.html
+└── database/
+    └── init_db.py

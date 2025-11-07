@@ -1,0 +1,705 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Départements - FlowERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <div>
+            <h1>📊 Gestion des Départements</h1>
+            <p>Gérez vos départements et leurs ressources</p>
+        </div>
+        <button class="btn btn-primary" onclick="openCreateDepartmentModal()">
+            <i class="fas fa-plus"></i> Nouveau département
+        </button>
+    </div>
+
+    <div class="departments-grid" id="departmentsGrid">
+        <div class="loading">
+            <i class="fas fa-spinner fa-spin"></i> Chargement des départements...
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Create Department -->
+<div id="createDepartmentModal" class="modal-overlay">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h2><i class="fas fa-building"></i> Créer un département</h2>
+            <button class="modal-close-btn" onclick="closeCreateModal()" type="button">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="createDepartmentForm">
+                <div class="form-group">
+                    <label for="dept_name">
+                        <i class="fas fa-tag"></i> Nom du département *
+                    </label>
+                    <input type="text" id="dept_name" name="name" required 
+                           class="form-control" placeholder="Ex: Ressources Humaines">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dept_code">
+                            <i class="fas fa-code"></i> Code
+                        </label>
+                        <input type="text" id="dept_code" name="code" 
+                               class="form-control" placeholder="Ex: RH">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dept_budget">
+                            <i class="fas fa-money-bill-wave"></i> Budget (TND)
+                        </label>
+                        <input type="number" id="dept_budget" name="budget" 
+                               class="form-control" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="dept_description">
+                        <i class="fas fa-align-left"></i> Description
+                    </label>
+                    <textarea id="dept_description" name="description" rows="3"
+                              class="form-control" placeholder="Description du département..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">
+                        <i class="fas fa-times"></i> Annuler
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="createBtn">
+                        <i class="fas fa-check"></i> Créer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Delete Confirmation -->
+<div id="deleteDepartmentModal" class="modal-overlay">
+    <div class="modal-dialog modal-small">
+        <div class="modal-header">
+            <h2><i class="fas fa-exclamation-triangle"></i> Confirmer la suppression</h2>
+            <button class="modal-close-btn" onclick="closeDeleteModal()" type="button">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p id="deleteConfirmationText">Êtes-vous sûr de vouloir supprimer ce département ?</p>
+            <p class="text-warning"><strong>Attention :</strong> Cette action est irréversible et supprimera toutes les données associées.</p>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">
+                    <i class="fas fa-times"></i> Annuler
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                    <i class="fas fa-trash"></i> Supprimer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* [Previous styles remain the same] */
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .page-header h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1f2937;
+    }
+
+    .page-header p {
+        margin: 0.5rem 0 0 0;
+        color: #6b7280;
+        font-size: 1rem;
+    }
+
+    .departments-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .loading {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #6b7280;
+        font-size: 1.125rem;
+    }
+
+    .empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: #d1d5db;
+        margin-bottom: 1rem;
+    }
+
+    .department-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: 2px solid transparent;
+        position: relative;
+    }
+
+    .department-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+        border-color: #3b82f6;
+    }
+
+    .dept-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .dept-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin: 0;
+        flex: 1;
+        padding-right: 2rem;
+    }
+
+    .dept-code {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+        padding: 0.35rem 0.85rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .dept-description {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin: 1rem 0;
+        line-height: 1.6;
+    }
+
+    .dept-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-top: 1.25rem;
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+        background: #f9fafb;
+        border-radius: 8px;
+    }
+
+    .stat-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #3b82f6;
+        display: block;
+    }
+
+    .stat-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin-top: 0.5rem;
+        text-transform: uppercase;
+    }
+
+    .dept-actions {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        display: flex;
+        gap: 0.25rem;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .department-card:hover .dept-actions {
+        opacity: 1;
+    }
+
+    .btn-icon {
+        background: none;
+        border: none;
+        padding: 0.5rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+    }
+
+    .btn-delete {
+        color: #ef4444;
+    }
+
+    .btn-delete:hover {
+        background: #fee2e2;
+        transform: scale(1.1);
+    }
+
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+    }
+
+    .modal-overlay.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+
+    .modal-dialog {
+        background: white;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 600px;
+        max-height: 90vh;
+        overflow: hidden;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-dialog.modal-small {
+        max-width: 400px;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .modal-header h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1f2937;
+    }
+
+    .modal-close-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: #6b7280;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 6px;
+    }
+
+    .modal-close-btn:hover {
+        background: #f3f4f6;
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+        max-height: calc(90vh - 140px);
+        overflow-y: auto;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 1rem;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .btn-secondary {
+        background: #f3f4f6;
+        color: #4b5563;
+    }
+
+    .btn-secondary:hover {
+        background: #e5e7eb;
+    }
+
+    .btn-danger {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+
+    .text-warning {
+        color: #f59e0b;
+        font-size: 0.875rem;
+        margin: 1rem 0;
+    }
+
+    @media (max-width: 768px) {
+        .departments-grid {
+            grid-template-columns: 1fr;
+        }
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+        .dept-actions {
+            opacity: 1; /* Toujours visible sur mobile */
+        }
+    }
+</style>
+
+<script>
+let departments = [];
+let departmentToDelete = null;
+
+// Load departments on page load
+window.addEventListener('DOMContentLoaded', loadDepartments);
+
+async function loadDepartments() {
+    try {
+        const response = await fetch('/department/list');
+        const data = await response.json();
+        
+        if (data.success) {
+            departments = data.departments || [];
+            renderDepartments();
+        } else {
+            showError('Erreur lors du chargement des départements');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Erreur de connexion');
+    }
+}
+
+function renderDepartments() {
+    const grid = document.getElementById('departmentsGrid');
+    
+    if (departments.length === 0) {
+        grid.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-building"></i>
+                <h3>Aucun département</h3>
+                <p>Créez votre premier département pour commencer</p>
+            </div>
+        `;
+        return;
+    }
+    
+    grid.innerHTML = departments.map(dept => {
+        const budget = parseFloat(dept.budget) || 0;
+        const budgetSpent = parseFloat(dept.budget_spent) || 0;
+        
+        return `
+            <div class="department-card">
+                <div class="dept-actions">
+                    <button class="btn-icon btn-delete" onclick="confirmDeleteDepartment(${dept.id}, '${escapeHtml(dept.name)}')" 
+                            title="Supprimer le département">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+                
+                <div class="dept-header" onclick="viewDepartmentSettings(${dept.id})">
+                    <h3 class="dept-title">${escapeHtml(dept.name)}</h3>
+                    ${dept.code ? `<span class="dept-code">${escapeHtml(dept.code)}</span>` : ''}
+                </div>
+                
+                ${dept.description ? `<p class="dept-description" onclick="viewDepartmentSettings(${dept.id})">${escapeHtml(dept.description)}</p>` : ''}
+                
+                <div class="dept-stats" onclick="viewDepartmentSettings(${dept.id})">
+                    <div class="stat-item">
+                        <span class="stat-value">${dept.employees_count || 0}</span>
+                        <span class="stat-label">Employés</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value">${budget > 0 ? budget.toFixed(0) : 0}</span>
+                        <span class="stat-label">Budget TND</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Modal functions
+function openCreateDepartmentModal() {
+    document.getElementById('createDepartmentModal').classList.add('active');
+    document.getElementById('createDepartmentForm').reset();
+}
+
+function closeCreateModal() {
+    document.getElementById('createDepartmentModal').classList.remove('active');
+}
+
+function openDeleteModal() {
+    document.getElementById('deleteDepartmentModal').classList.add('active');
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteDepartmentModal').classList.remove('active');
+    departmentToDelete = null;
+}
+
+function confirmDeleteDepartment(deptId, deptName) {
+    // Empêcher la propagation du clic pour éviter d'ouvrir la page du département
+    event.stopPropagation();
+    
+    departmentToDelete = deptId;
+    document.getElementById('deleteConfirmationText').innerHTML = 
+        `Êtes-vous sûr de vouloir supprimer le département <strong>"${escapeHtml(deptName)}"</strong> ?`;
+    openDeleteModal();
+}
+
+async function deleteDepartment() {
+    if (!departmentToDelete) return;
+    
+    const btn = document.getElementById('confirmDeleteBtn');
+    const originalText = btn.innerHTML;
+    
+    try {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Suppression...';
+        
+        const response = await fetch(`/department/delete/${departmentToDelete}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            }
+        });
+        
+        if (response.ok) {
+            showNotification('Département supprimé avec succès!', 'success');
+            closeDeleteModal();
+            await loadDepartments(); // Recharger la liste
+        } else {
+            const result = await response.json();
+            showError(result.error || 'Erreur lors de la suppression');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Erreur de connexion');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+// Close modals on backdrop click
+document.getElementById('createDepartmentModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeCreateModal();
+    }
+});
+
+document.getElementById('deleteDepartmentModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeDeleteModal();
+    }
+});
+
+// Create department form submission
+document.getElementById('createDepartmentForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('createBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
+    
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Convert budget to number
+    if (data.budget) {
+        data.budget = parseFloat(data.budget);
+    }
+    
+    try {
+        const response = await fetch('/department/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+            // Success!
+            showNotification('Département créé avec succès!', 'success');
+            
+            // Close modal
+            closeCreateModal();
+            
+            // Reload departments
+            await loadDepartments();
+            
+            // Redirect to department settings after 1 second
+            setTimeout(() => {
+                window.location.href = `/department-settings/${result.department.id}`;
+            }, 1000);
+            
+        } else {
+            showError(result.error || 'Erreur lors de la création');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-check"></i> Créer';
+        }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Erreur de connexion');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-check"></i> Créer';
+    }
+});
+
+// Redirect to department settings when clicking on card
+function viewDepartmentSettings(deptId) {
+    window.location.href = `/department-settings/${deptId}`;
+}
+
+// Utility functions
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showError(message) {
+    if (typeof showNotification === 'function') {
+        showNotification(message, 'error');
+    } else {
+        alert(message);
+    }
+}
+
+function showNotification(message, type) {
+    // Use global notification if available, otherwise simple alert
+    if (window.FlowERP && window.FlowERP.showNotification) {
+        window.FlowERP.showNotification(message, type);
+    } else {
+        alert(message);
+    }
+}
+
+function getCSRFToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+           document.querySelector('input[name="csrf_token"]')?.value ||
+           '{{ session.csrf_token }}';
+}
+
+// Close modals with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeCreateModal();
+        closeDeleteModal();
+    }
+});
+
+// Confirmer la suppression
+document.getElementById('confirmDeleteBtn').addEventListener('click', deleteDepartment);
+</script>
+{% endblock %}

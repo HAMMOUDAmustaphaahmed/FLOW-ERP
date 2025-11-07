@@ -1,0 +1,26 @@
+# Flask et extensions
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-CORS==4.0.0
+Flask-Session==0.5.0
+Flask-Login==0.6.3
+
+# Base de données
+SQLAlchemy==2.0.23
+PyMySQL==1.1.0  # ← AJOUTER CETTE LIGNE
+
+# Sécurité
+Werkzeug==3.0.1
+bleach==6.1.0
+pyotp==2.9.0
+
+# Utilitaires
+python-dotenv==1.0.0
+requests==2.31.0
+
+# Production (optionnel)
+gunicorn==21.2.0
+
+# Développement (optionnel)
+pytest==7.4.3
+pytest-flask==1.3.0

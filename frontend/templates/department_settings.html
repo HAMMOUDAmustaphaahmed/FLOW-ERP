@@ -1,0 +1,941 @@
+{% extends "base.html" %}
+
+{% block title %}Configuration - {{ department.name }} - FlowERP{% endblock %}
+
+{% block content %}
+<div class="dept-settings-container">
+    <!-- Header -->
+    <div class="dept-header-section">
+        <div class="header-left">
+            <a href="/departments" class="back-link">
+                <i class="fas fa-arrow-left"></i> Retour aux départements
+            </a>
+            <h1><i class="fas fa-building"></i> {{ department.name }}</h1>
+            <p class="dept-subtitle">Configuration et gestion des tables personnalisées</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="editDepartment()">
+                <i class="fas fa-edit"></i> Modifier
+            </button>
+            <button class="btn btn-primary" onclick="openCreateTableModal()">
+                <i class="fas fa-plus"></i> Nouvelle table
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #dbeafe">
+                <i class="fas fa-table" style="color: #3b82f6"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value" id="tablesCount">0</div>
+                <div class="stat-label">Tables</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #d1fae5">
+                <i class="fas fa-users" style="color: #10b981"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{ department.employees_count }}</div>
+                <div class="stat-label">Employés</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #fef3c7">
+                <i class="fas fa-wallet" style="color: #f59e0b"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value">{{ "%.2f"|format(department.budget or 0) }}</div>
+                <div class="stat-label">Budget (TND)</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #fce7f3">
+                <i class="fas fa-database" style="color: #ec4899"></i>
+            </div>
+            <div class="stat-content">
+                <div class="stat-value" id="totalRows">0</div>
+                <div class="stat-label">Entrées totales</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tables List -->
+    <div class="tables-section">
+        <h2><i class="fas fa-table"></i> Tables personnalisées</h2>
+        <div id="tablesList" class="tables-grid">
+            <div class="loading-placeholder">
+                <i class="fas fa-spinner fa-spin"></i> Chargement...
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Create Table -->
+<div id="createTableModal" class="modal-overlay">
+    <div class="modal-dialog modal-large">
+        <div class="modal-header">
+            <h2><i class="fas fa-table"></i> Créer une nouvelle table</h2>
+            <button class="modal-close-btn" onclick="closeCreateTableModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="createTableForm">
+                <!-- Table Info -->
+                <div class="form-section">
+                    <h3>Informations de la table</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-tag"></i> Nom technique *
+                            </label>
+                            <input type="text" name="name" required class="form-control" 
+                                   placeholder="Ex: parc_informatique" pattern="[a-z_]+">
+                            <small>Lettres minuscules et underscores uniquement</small>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-heading"></i> Nom affiché *
+                            </label>
+                            <input type="text" name="display_name" required class="form-control" 
+                                   placeholder="Ex: Parc Informatique">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-align-left"></i> Description
+                        </label>
+                        <textarea name="description" rows="2" class="form-control" 
+                                  placeholder="Description de la table..."></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-icons"></i> Icône
+                            </label>
+                            <select name="icon" class="form-control">
+                                <option value="table">Table</option>
+                                <option value="desktop">Ordinateur</option>
+                                <option value="users">Utilisateurs</option>
+                                <option value="file-invoice">Facture</option>
+                                <option value="box">Matériel</option>
+                                <option value="clipboard-list">Liste</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-eye"></i> Permission de vue
+                            </label>
+                            <select name="view_permission" class="form-control">
+                                <option value="department">Département</option>
+                                <option value="all">Tous</option>
+                                <option value="manager_only">Manager uniquement</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columns -->
+                <div class="form-section">
+                    <div class="section-header">
+                        <h3>Colonnes</h3>
+                        <button type="button" class="btn btn-sm btn-primary" onclick="addColumn()">
+                            <i class="fas fa-plus"></i> Ajouter une colonne
+                        </button>
+                    </div>
+                    
+                    <div id="columnsContainer" class="columns-container">
+                        <!-- Columns will be added here -->
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeCreateTableModal()">
+                        <i class="fas fa-times"></i> Annuler
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="createTableBtn">
+                        <i class="fas fa-check"></i> Créer la table
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .dept-settings-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .dept-header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6b7280;
+        text-decoration: none;
+        font-size: 0.875rem;
+        margin-bottom: 0.75rem;
+        transition: color 0.2s;
+    }
+
+    .back-link:hover {
+        color: #3b82f6;
+    }
+
+    .dept-header-section h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1f2937;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .dept-subtitle {
+        margin: 0.5rem 0 0 0;
+        color: #6b7280;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .stat-content {
+        flex: 1;
+    }
+
+    .stat-value {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: #1f2937;
+        line-height: 1;
+    }
+
+    .stat-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+
+    .tables-section {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .tables-section h2 {
+        margin: 0 0 1.5rem 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1f2937;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .tables-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .table-card {
+        background: #f9fafb;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .table-card:hover {
+        border-color: #3b82f6;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+    }
+
+    .table-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .table-actions {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .btn-icon {
+        background: none;
+        border: none;
+        padding: 0.5rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        transition: background 0.2s;
+    }
+
+    .btn-delete {
+        color: #ef4444;
+    }
+
+    .btn-delete:hover {
+        background: #fee2e2;
+    }
+
+    .table-icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.25rem;
+    }
+
+    .table-name {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin: 1rem 0 0.5rem 0;
+    }
+
+    .table-description {
+        font-size: 0.875rem;
+        color: #6b7280;
+        line-height: 1.5;
+    }
+
+    .table-stats {
+        display: flex;
+        gap: 1.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .table-stat {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    .empty-tables {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 3rem;
+    }
+
+    .empty-tables i {
+        font-size: 3rem;
+        color: #d1d5db;
+        margin-bottom: 1rem;
+    }
+
+    .loading-placeholder {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 3rem;
+        color: #6b7280;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+    }
+
+    .modal-overlay.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+    }
+
+    .modal-dialog {
+        background: white;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 700px;
+        max-height: 90vh;
+        overflow: hidden;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-dialog.modal-large {
+        max-width: 900px;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .modal-header h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1f2937;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .modal-close-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: #6b7280;
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 6px;
+    }
+
+    .modal-close-btn:hover {
+        background: #f3f4f6;
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+        max-height: calc(90vh - 140px);
+        overflow-y: auto;
+    }
+
+    .form-section {
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .form-section:last-of-type {
+        border-bottom: none;
+    }
+
+    .form-section h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 1rem;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #374151;
+        font-size: 0.95rem;
+    }
+
+    .form-group small {
+        display: block;
+        margin-top: 0.25rem;
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 1rem;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .columns-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .column-item {
+        background: #f9fafb;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 1rem;
+    }
+
+    .column-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+
+    .column-number {
+        font-weight: 600;
+        color: #3b82f6;
+    }
+
+    .btn-remove {
+        background: none;
+        border: none;
+        color: #ef4444;
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        transition: background 0.2s;
+    }
+
+    .btn-remove:hover {
+        background: #fee2e2;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .btn-sm {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .btn-secondary {
+        background: #f3f4f6;
+        color: #4b5563;
+    }
+
+    .btn-secondary:hover {
+        background: #e5e7eb;
+    }
+
+    @media (max-width: 768px) {
+        .dept-header-section {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        .tables-grid {
+            grid-template-columns: 1fr;
+        }
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+const DEPARTMENT_ID = {{ department.id }};
+let tables = [];
+let columnCount = 0;
+
+// Load tables on page load
+window.addEventListener('DOMContentLoaded', () => {
+    loadTables();
+    addColumn(); // Add first column by default
+});
+
+async function loadTables() {
+    try {
+        const response = await fetch(`/api/department-tables/list/${DEPARTMENT_ID}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            tables = data.tables || [];
+            renderTables();
+            updateStats();
+        }
+    } catch (error) {
+        console.error('Error loading tables:', error);
+    }
+}
+
+function renderTables() {
+    const container = document.getElementById('tablesList');
+    
+    if (tables.length === 0) {
+        container.innerHTML = `
+            <div class="empty-tables">
+                <i class="fas fa-table"></i>
+                <h3>Aucune table créée</h3>
+                <p>Créez votre première table personnalisée pour commencer</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = tables.map(table => `
+        <div class="table-card" onclick="openTable(${table.id})">
+            <div class="table-card-header">
+                <div class="table-icon">
+                    <i class="fas fa-${table.icon}"></i>
+                </div>
+                <div class="table-actions">
+                    <button class="btn-icon btn-delete" onclick="deleteTable(event, ${table.id})" title="Supprimer">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="table-name">${escapeHtml(table.display_name)}</div>
+            ${table.description ? `<div class="table-description">${escapeHtml(table.description)}</div>` : ''}
+            <div class="table-stats">
+                <div class="table-stat">
+                    <i class="fas fa-columns"></i>
+                    <span>${table.columns ? table.columns.length : 0} colonnes</span>
+                </div>
+                <div class="table-stat">
+                    <i class="fas fa-database"></i>
+                    <span>${table.rows_count || 0} entrées</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updateStats() {
+    document.getElementById('tablesCount').textContent = tables.length;
+    const totalRows = tables.reduce((sum, t) => sum + (t.rows_count || 0), 0);
+    document.getElementById('totalRows').textContent = totalRows;
+}
+
+function openCreateTableModal() {
+    document.getElementById('createTableModal').classList.add('active');
+    columnCount = 0;
+    document.getElementById('columnsContainer').innerHTML = '';
+    addColumn();
+}
+
+function closeCreateTableModal() {
+    document.getElementById('createTableModal').classList.remove('active');
+}
+
+function addColumn() {
+    columnCount++;
+    const container = document.getElementById('columnsContainer');
+    
+    const columnHtml = `
+        <div class="column-item" id="column${columnCount}">
+            <div class="column-header">
+                <span class="column-number">Colonne ${columnCount}</span>
+                <button type="button" class="btn-remove" onclick="removeColumn(${columnCount})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Nom technique</label>
+                    <input type="text" name="col_name_${columnCount}" required class="form-control" 
+                           placeholder="Ex: marque" pattern="[a-z_]+">
+                </div>
+                <div class="form-group">
+                    <label>Nom affiché</label>
+                    <input type="text" name="col_display_${columnCount}" required class="form-control" 
+                           placeholder="Ex: Marque">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Type de données</label>
+                    <select name="col_type_${columnCount}" required class="form-control">
+                        <option value="text">Texte</option>
+                        <option value="number">Nombre</option>
+                        <option value="decimal">Décimal</option>
+                        <option value="date">Date</option>
+                        <option value="boolean">Oui/Non</option>
+                        <option value="email">Email</option>
+                        <option value="phone">Téléphone</option>
+                        <option value="select">Liste déroulante</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="col_required_${columnCount}">
+                        Obligatoire
+                    </label>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', columnHtml);
+}
+
+function removeColumn(id) {
+    const elem = document.getElementById(`column${id}`);
+    if (elem) elem.remove();
+}
+
+async function deleteTable(event, tableId) {
+    event.stopPropagation(); // Empêche l'ouverture de la table
+    
+    const table = tables.find(t => t.id === tableId);
+    if (!table) return;
+    
+    if (confirm(`Êtes-vous sûr de vouloir supprimer la table "${table.display_name}" ?\nCette action supprimera également toutes les données associées.`)) {
+        try {
+            const response = await fetch(`/api/department-tables/delete/${tableId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCSRFToken()
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification('Table supprimée avec succès!', 'success');
+                await loadTables(); // Recharger la liste
+            } else {
+                showNotification(result.error || 'Erreur lors de la suppression', 'error');
+            }
+        } catch (error) {
+            showNotification('Erreur de connexion', 'error');
+        }
+    }
+}
+
+function getCSRFToken() {
+    // Récupère le token CSRF depuis les meta tags ou un input hidden
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+           document.querySelector('input[name="csrf_token"]')?.value;
+}
+
+// Submit form
+document.getElementById('createTableForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const btn = document.getElementById('createTableBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
+    
+    const formData = new FormData(e.target);
+    
+    // Build table data
+    const tableData = {
+        department_id: DEPARTMENT_ID,
+        name: formData.get('name'),
+        display_name: formData.get('display_name'),
+        description: formData.get('description'),
+        icon: formData.get('icon'),
+        view_permission: formData.get('view_permission'),
+        columns: []
+    };
+    
+    // Collect columns
+    for (let i = 1; i <= columnCount; i++) {
+        const name = formData.get(`col_name_${i}`);
+        if (name) {
+            tableData.columns.push({
+                name: name,
+                display_name: formData.get(`col_display_${i}`),
+                data_type: formData.get(`col_type_${i}`),
+                is_required: formData.get(`col_required_${i}`) === 'on',
+                order: i - 1
+            });
+        }
+    }
+    
+    try {
+        const response = await fetch('/api/department-tables/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(tableData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Table créée avec succès!', 'success');
+            closeCreateTableModal();
+            await loadTables();
+        } else {
+            showNotification(result.error || 'Erreur lors de la création', 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Créer la table';
+    }
+});
+
+function openTable(tableId) {
+    // Redirect to table view/edit page
+    window.location.href = `/department-table/${tableId}`;
+}
+
+function editDepartment() {
+    // Show edit form or redirect to edit page
+    const newName = prompt('Nouveau nom du département:', '{{ department.name }}');
+    if (newName && newName.trim() !== '') {
+        updateDepartment(newName.trim());
+    }
+}
+
+async function updateDepartment(newName) {
+    try {
+        const response = await fetch(`/department/update/{{ department.id }}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ session.csrf_token }}'
+            },
+            body: JSON.stringify({ name: newName })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Département mis à jour!', 'success');
+            // Reload page to show new name
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification(result.error || 'Erreur lors de la mise à jour', 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'error');
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showNotification(message, type) {
+    if (window.FlowERP && window.FlowERP.showNotification) {
+        window.FlowERP.showNotification(message, type);
+    } else {
+        alert(message);
+    }
+}
+
+// Close modal on backdrop click
+document.getElementById('createTableModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeCreateTableModal();
+    }
+});
+
+// ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeCreateTableModal();
+    }
+});
+</script>
+{% endblock %}

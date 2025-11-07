@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Création du Compte Administrateur - FlowERP</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card signup-card">
+            <!-- Logo et Titre -->
+            <div class="auth-header">
+                <div class="auth-logo pulse">
+                    <i class="fas fa-cube"></i>
+                </div>
+                <h1>Bienvenue sur FlowERP</h1>
+                <p class="auth-subtitle">Créez le compte administrateur principal</p>
+                <div class="setup-step">
+                    <span class="step-badge">Étape 1/2</span>
+                </div>
+            </div>
+            
+            <!-- Formulaire d'inscription admin -->
+            <form id="signupAdminForm" class="auth-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="first_name">
+                            <i class="fas fa-user"></i>
+                            Prénom
+                        </label>
+                        <input 
+                            type="text" 
+                            id="first_name" 
+                            name="first_name" 
+                            class="form-control" 
+                            placeholder="Votre prénom"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="last_name">
+                            <i class="fas fa-user"></i>
+                            Nom
+                        </label>
+                        <input 
+                            type="text" 
+                            id="last_name" 
+                            name="last_name" 
+                            class="form-control" 
+                            placeholder="Votre nom"
+                            required
+                        >
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="username">
+                        <i class="fas fa-at"></i>
+                        Nom d'utilisateur
+                    </label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        class="form-control" 
+                        placeholder="Choisissez un nom d'utilisateur"
+                        required
+                        minlength="3"
+                        maxlength="30"
+                        pattern="[a-zA-Z0-9_-]+"
+                    >
+                    <small class="form-text">3-30 caractères, lettres, chiffres, - et _ uniquement</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">
+                        <i class="fas fa-envelope"></i>
+                        Email
+                    </label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        class="form-control" 
+                        placeholder="votre@email.com"
+                        required
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">
+                        <i class="fas fa-lock"></i>
+                        Mot de passe
+                    </label>
+                    <div class="password-input-wrapper">
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            class="form-control" 
+                            placeholder="Créez un mot de passe fort"
+                            required
+                            minlength="8"
+                        >
+                        <button type="button" class="password-toggle" onclick="togglePassword('password')">
+                            <i class="fas fa-eye" id="password-icon"></i>
+                        </button>
+                    </div>
+                    <div class="password-strength" id="passwordStrength"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirm_password">
+                        <i class="fas fa-lock"></i>
+                        Confirmer le mot de passe
+                    </label>
+                    <div class="password-input-wrapper">
+                        <input 
+                            type="password" 
+                            id="confirm_password" 
+                            name="confirm_password" 
+                            class="form-control" 
+                            placeholder="Confirmez votre mot de passe"
+                            required
+                        >
+                        <button type="button" class="password-toggle" onclick="togglePassword('confirm_password')">
+                            <i class="fas fa-eye" id="confirm_password-icon"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Exigences du mot de passe -->
+                <div class="password-requirements">
+                    <p class="requirements-title">Le mot de passe doit contenir:</p>
+                    <ul id="passwordChecklist">
+                        <li id="req-length"><i class="fas fa-times-circle"></i> Au moins 8 caractères</li>
+                        <li id="req-uppercase"><i class="fas fa-times-circle"></i> Une lettre majuscule</li>
+                        <li id="req-lowercase"><i class="fas fa-times-circle"></i> Une lettre minuscule</li>
+                        <li id="req-number"><i class="fas fa-times-circle"></i> Un chiffre</li>
+                        <li id="req-special"><i class="fas fa-times-circle"></i> Un caractère spécial (!@#$%^&*)</li>
+                    </ul>
+                </div>
+                
+                <!-- Messages -->
+                <div id="errorMessage" class="alert alert-error" style="display: none;"></div>
+                
+                <!-- Bouton d'inscription -->
+                <button type="submit" class="btn btn-primary btn-block" id="signupButton">
+                    <span id="signupButtonText">
+                        <i class="fas fa-user-plus"></i>
+                        Créer le compte administrateur
+                    </span>
+                    <span id="signupButtonLoader" class="button-loader" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Création en cours...
+                    </span>
+                </button>
+            </form>
+            
+            <!-- Info de sécurité -->
+            <div class="auth-footer">
+                <div class="security-info">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Ce compte aura tous les privilèges administrateur sur le système</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Illustration -->
+        <div class="auth-illustration">
+            <div class="setup-illustration">
+                <i class="fas fa-rocket"></i>
+            </div>
+            <div class="illustration-text">
+                <h2>Premiers pas avec FlowERP</h2>
+                <div class="setup-steps">
+                    <div class="setup-step-item active">
+                        <span class="step-number">1</span>
+                        <span class="step-text">Créer le compte admin</span>
+                    </div>
+                    <div class="setup-step-item">
+                        <span class="step-number">2</span>
+                        <span class="step-text">Configurer l'entreprise</span>
+                    </div>
+                    <div class="setup-step-item">
+                        <span class="step-number">3</span>
+                        <span class="step-text">Créer les départements</span>
+                    </div>
+                    <div class="setup-step-item">
+                        <span class="step-number">4</span>
+                        <span class="step-text">Commencer à utiliser</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Validation du mot de passe en temps réel
+        const passwordInput = document.getElementById('password');
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            checkPasswordRequirements(password);
+        });
+        
+        function checkPasswordRequirements(password) {
+            const requirements = {
+                length: password.length >= 8,
+                uppercase: /[A-Z]/.test(password),
+                lowercase: /[a-z]/.test(password),
+                number: /\d/.test(password),
+                special: /[!@#$%^&*()_+\-=\[\]{};:'",.<>?/\\|`~]/.test(password)
+            };
+            
+            // Mettre à jour les indicateurs
+            for (const [key, passed] of Object.entries(requirements)) {
+                const element = document.getElementById(`req-${key}`);
+                const icon = element.querySelector('i');
+                
+                if (passed) {
+                    icon.className = 'fas fa-check-circle';
+                    element.style.color = '#10b981';
+                } else {
+                    icon.className = 'fas fa-times-circle';
+                    element.style.color = '#ef4444';
+                }
+            }
+            
+            // Calculer et afficher la force du mot de passe
+            const strength = Object.values(requirements).filter(Boolean).length;
+            const strengthBar = document.getElementById('passwordStrength');
+            const strengthTexts = ['Très faible', 'Faible', 'Moyen', 'Bon', 'Excellent'];
+            const strengthColors = ['#ef4444', '#f59e0b', '#eab308', '#10b981', '#059669'];
+            
+            strengthBar.innerHTML = `
+                <div class="strength-bar">
+                    <div class="strength-fill" style="width: ${strength * 20}%; background: ${strengthColors[strength - 1] || strengthColors[0]}"></div>
+                </div>
+                <span class="strength-text" style="color: ${strengthColors[strength - 1] || strengthColors[0]}">
+                    ${strengthTexts[strength - 1] || strengthTexts[0]}
+                </span>
+            `;
+        }
+        
+        // Toggle password visibility
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(inputId + '-icon');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+        
+        // Gestion du formulaire
+        document.getElementById('signupAdminForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                first_name: document.getElementById('first_name').value,
+                last_name: document.getElementById('last_name').value,
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                confirm_password: document.getElementById('confirm_password').value
+            };
+            
+            const errorMessage = document.getElementById('errorMessage');
+            const signupButton = document.getElementById('signupButton');
+            const signupButtonText = document.getElementById('signupButtonText');
+            const signupButtonLoader = document.getElementById('signupButtonLoader');
+            
+            // Cacher les messages d'erreur
+            errorMessage.style.display = 'none';
+            
+            // Vérifier que les mots de passe correspondent
+            if (formData.password !== formData.confirm_password) {
+                errorMessage.textContent = 'Les mots de passe ne correspondent pas';
+                errorMessage.style.display = 'block';
+                return;
+            }
+            
+            // Afficher le loader
+            signupButton.disabled = true;
+            signupButtonText.style.display = 'none';
+            signupButtonLoader.style.display = 'block';
+            
+            try {
+                const response = await fetch('/auth/signup-admin', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Succès - afficher message et rediriger
+                    const successDiv = document.createElement('div');
+                    successDiv.className = 'alert alert-success';
+                    successDiv.innerHTML = '<i class="fas fa-check-circle"></i> Compte créé avec succès! Redirection...';
+                    this.appendChild(successDiv);
+                    
+                    setTimeout(() => {
+                        window.location.href = '/company/setup-page';
+                    }, 1500);
+                } else {
+                    // Erreur
+                    errorMessage.textContent = data.error || 'Erreur lors de la création du compte';
+                    errorMessage.style.display = 'block';
+                    
+                    signupButton.disabled = false;
+                    signupButtonText.style.display = 'block';
+                    signupButtonLoader.style.display = 'none';
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Erreur de connexion au serveur';
+                errorMessage.style.display = 'block';
+                
+                signupButton.disabled = false;
+                signupButtonText.style.display = 'block';
+                signupButtonLoader.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

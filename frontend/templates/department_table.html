@@ -1,0 +1,684 @@
+{% extends "base.html" %}
+
+{% block title %}{{ table.display_name }} - FlowERP{% endblock %}
+
+{% block content %}
+<div class="table-view-container">
+    <!-- Header -->
+    <div class="table-header-section">
+        <div class="header-left">
+            <a href="/department-settings/{{ table.department_id }}" class="back-link">
+                <i class="fas fa-arrow-left"></i> Retour au département
+            </a>
+            <h1>
+                <i class="fas fa-{{ table.icon }}"></i> 
+                {{ table.display_name }}
+            </h1>
+            {% if table.description %}
+            <p class="table-subtitle">{{ table.description }}</p>
+            {% endif %}
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="exportTable()">
+                <i class="fas fa-download"></i> Exporter
+            </button>
+            <button class="btn btn-primary" onclick="addRow()">
+                <i class="fas fa-plus"></i> Ajouter
+            </button>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrapper">
+        <div class="table-responsive">
+            <table class="data-table" id="dataTable">
+                <thead>
+                    <tr id="tableHeaders">
+                        <!-- Headers will be populated by JavaScript -->
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Data will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <i class="fas fa-database"></i>
+            <h3>Aucune donnée</h3>
+            <p>Commencez par ajouter des données à votre table</p>
+            <button class="btn btn-primary" onclick="addRow()">
+                <i class="fas fa-plus"></i> Ajouter la première entrée
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add/Edit Row -->
+<div id="rowModal" class="modal-overlay" style="display: none;">
+    <div class="modal-dialog modal-medium">
+        <div class="modal-header">
+            <h2 id="rowModalTitle">
+                <i class="fas fa-plus"></i> <span id="modalActionText">Ajouter une entrée</span>
+            </h2>
+            <button class="modal-close-btn" onclick="closeRowModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="rowForm">
+                <div id="rowFormFields">
+                    <!-- Form fields will be populated by JavaScript -->
+                    <div class="loading-placeholder">
+                        <i class="fas fa-spinner fa-spin"></i> Chargement du formulaire...
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeRowModal()">
+                        <i class="fas fa-times"></i> Annuler
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="saveRowBtn">
+                        <i class="fas fa-check"></i> <span id="saveBtnText">Enregistrer</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.table-view-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.table-header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.table-subtitle {
+    margin: 0.5rem 0 0 0;
+    color: #6b7280;
+}
+
+.table-wrapper {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th {
+    background: #f8fafc;
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 2px solid #e5e7eb;
+    white-space: nowrap;
+}
+
+.data-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: top;
+}
+
+.data-table tr:hover {
+    background: #f9fafb;
+}
+
+.data-table .actions {
+    white-space: nowrap;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 0.25rem;
+}
+
+.btn-edit {
+    color: #3b82f6;
+}
+
+.btn-edit:hover {
+    background: #dbeafe;
+}
+
+.btn-delete {
+    color: #ef4444;
+}
+
+.btn-delete:hover {
+    background: #fee2e2;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #6b7280;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: #d1d5db;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    margin: 0 0 0.5rem 0;
+    color: #374151;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #374151;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-dialog.modal-medium {
+    max-width: 600px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+}
+
+.modal-close-btn:hover {
+    background: #f3f4f6;
+}
+
+.modal-body {
+    padding: 1.5rem;
+    max-height: calc(90vh - 140px);
+    overflow-y: auto;
+}
+
+.required-asterisk {
+    color: #ef4444;
+    margin-left: 2px;
+}
+
+.field-description {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.error-message {
+    color: #ef4444;
+    text-align: center;
+    padding: 1rem;
+}
+
+.loading-placeholder {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-secondary {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.btn-secondary:hover {
+    background: #e5e7eb;
+}
+</style>
+
+<script>
+const TABLE_ID = {{ table.id }};
+let tableData = null;
+let rows = [];
+let currentEditingRow = null;
+
+// Load table data
+async function loadTableData() {
+    try {
+        const response = await fetch(`/api/department-tables/get/${TABLE_ID}?include_rows=true`);
+        const data = await response.json();
+        
+        if (data.success) {
+            tableData = data.table;
+            rows = tableData.rows || [];
+            renderTable();
+        }
+    } catch (error) {
+        console.error('Error loading table:', error);
+        showNotification('Erreur lors du chargement', 'error');
+    }
+}
+
+function renderTable() {
+    if (!tableData) return;
+    
+    const headersContainer = document.getElementById('tableHeaders');
+    const bodyContainer = document.getElementById('tableBody');
+    const emptyState = document.getElementById('emptyState');
+    
+    // Render headers
+    headersContainer.innerHTML = tableData.columns
+        .filter(col => col.is_visible)
+        .map(col => `<th>${escapeHtml(col.display_name)}</th>`)
+        .join('') + '<th>Actions</th>';
+    
+    // Render rows
+    if (rows.length === 0) {
+        bodyContainer.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    bodyContainer.innerHTML = rows.map(row => `
+        <tr>
+            ${tableData.columns
+                .filter(col => col.is_visible)
+                .map(col => `<td>${formatCellValue(row.data[col.name], col)}</td>`)
+                .join('')}
+            <td class="actions">
+                <button class="btn-icon btn-edit" onclick="editRow(${row.id})" title="Modifier">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-icon btn-delete" onclick="deleteRow(${row.id})" title="Supprimer">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function formatCellValue(value, column) {
+    if (value === null || value === undefined) return '-';
+    
+    switch (column.data_type) {
+        case 'boolean':
+            return value ? '<i class="fas fa-check text-green-500"></i>' : '<i class="fas fa-times text-red-500"></i>';
+        case 'date':
+            return new Date(value).toLocaleDateString();
+        default:
+            return escapeHtml(String(value));
+    }
+}
+
+function addRow() {
+    openRowModal();
+}
+
+function editRow(rowId) {
+    const row = rows.find(r => r.id === rowId);
+    if (row) {
+        openRowModal(row);
+    }
+}
+
+function openRowModal(row = null) {
+    currentEditingRow = row;
+    
+    const modal = document.getElementById('rowModal');
+    const actionText = document.getElementById('modalActionText');
+    const saveBtnText = document.getElementById('saveBtnText');
+    
+    // Mettre à jour les textes
+    if (row) {
+        actionText.textContent = 'Modifier une entrée';
+        saveBtnText.textContent = 'Modifier';
+    } else {
+        actionText.textContent = 'Ajouter une entrée';
+        saveBtnText.textContent = 'Enregistrer';
+    }
+    
+    // Afficher le modal
+    modal.style.display = 'flex';
+    
+    // Populer les champs du formulaire
+    populateFormFields(row);
+}
+
+function closeRowModal() {
+    const modal = document.getElementById('rowModal');
+    modal.style.display = 'none';
+    
+    // Réinitialiser le formulaire
+    document.getElementById('rowForm').reset();
+    currentEditingRow = null;
+}
+
+function populateFormFields(row = null) {
+    const formFields = document.getElementById('rowFormFields');
+    
+    if (!tableData || !tableData.columns) {
+        formFields.innerHTML = '<div class="error-message">Erreur: Données de table non chargées</div>';
+        return;
+    }
+    
+    formFields.innerHTML = tableData.columns.map(column => {
+        const value = row ? (row.data[column.name] || '') : '';
+        return `
+            <div class="form-group">
+                <label>
+                    ${escapeHtml(column.display_name)}
+                    ${column.is_required ? '<span class="required-asterisk">*</span>' : ''}
+                </label>
+                ${renderFormField(column, value)}
+                ${column.description ? `<small class="field-description">${escapeHtml(column.description)}</small>` : ''}
+            </div>
+        `;
+    }).join('');
+}
+
+function renderFormField(column, value) {
+    const inputName = `field_${column.name}`;
+    const requiredAttr = column.is_required ? 'required' : '';
+    
+    switch (column.data_type) {
+        case 'boolean':
+            return `
+                <select name="${inputName}" class="form-control" ${requiredAttr}>
+                    <option value="">Sélectionner...</option>
+                    <option value="true" ${value === 'true' || value === true ? 'selected' : ''}>Oui</option>
+                    <option value="false" ${value === 'false' || value === false ? 'selected' : ''}>Non</option>
+                </select>
+            `;
+            
+        case 'select':
+            const options = column.type_config?.options || [];
+            return `
+                <select name="${inputName}" class="form-control" ${requiredAttr}>
+                    <option value="">Sélectionner...</option>
+                    ${options.map(opt => `
+                        <option value="${escapeHtml(opt)}" ${value === opt ? 'selected' : ''}>
+                            ${escapeHtml(opt)}
+                        </option>
+                    `).join('')}
+                </select>
+            `;
+            
+        case 'date':
+            const dateValue = value ? new Date(value).toISOString().split('T')[0] : '';
+            return `
+                <input type="date" name="${inputName}" value="${dateValue}" 
+                       class="form-control" ${requiredAttr}>
+            `;
+            
+        case 'number':
+        case 'decimal':
+            const config = column.type_config || {};
+            const min = config.min !== undefined ? `min="${config.min}"` : '';
+            const max = config.max !== undefined ? `max="${config.max}"` : '';
+            const step = column.data_type === 'decimal' ? 'step="0.01"' : 'step="1"';
+            
+            return `
+                <input type="number" name="${inputName}" value="${value || ''}" 
+                       class="form-control" ${requiredAttr} ${min} ${max} ${step}>
+            `;
+            
+        case 'textarea':
+            return `
+                <textarea name="${inputName}" class="form-control" ${requiredAttr} 
+                          rows="3" placeholder="${column.placeholder || ''}">${value || ''}</textarea>
+            `;
+            
+        default:
+            return `
+                <input type="text" name="${inputName}" value="${value || ''}" 
+                       class="form-control" ${requiredAttr} 
+                       placeholder="${column.placeholder || ''}">
+            `;
+    }
+}
+
+// Gestion de la soumission du formulaire
+document.getElementById('rowForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const btn = document.getElementById('saveRowBtn');
+    const originalText = btn.innerHTML;
+    
+    try {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
+        
+        const formData = new FormData(e.target);
+        const rowData = {};
+        
+        // Collecter les données
+        tableData.columns.forEach(column => {
+            let value = formData.get(`field_${column.name}`);
+            
+            // Convertir les types
+            if (column.data_type === 'number' || column.data_type === 'decimal') {
+                value = value ? parseFloat(value) : null;
+            } else if (column.data_type === 'boolean') {
+                value = value === 'true';
+            }
+            
+            rowData[column.name] = value;
+        });
+        
+        // Appel API
+        const url = currentEditingRow ? 
+            `/api/department-tables/rows/${currentEditingRow.id}` : 
+            `/api/department-tables/${TABLE_ID}/rows/add`;
+            
+        const method = currentEditingRow ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({ data: rowData })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(
+                currentEditingRow ? 'Entrée modifiée avec succès!' : 'Entrée ajoutée avec succès!', 
+                'success'
+            );
+            closeRowModal();
+            await loadTableData(); // Recharger les données
+        } else {
+            showNotification(result.error || 'Erreur lors de l\'enregistrement', 'error');
+        }
+        
+    } catch (error) {
+        console.error('Error saving row:', error);
+        showNotification('Erreur de connexion', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+});
+
+// Fonction de suppression d'une entrée
+async function deleteRow(rowId) {
+    const row = rows.find(r => r.id === rowId);
+    if (!row) return;
+    
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette entrée ? Cette action est irréversible.')) {
+        try {
+            const response = await fetch(`/api/department-tables/rows/${rowId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCSRFToken()
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification('Entrée supprimée avec succès!', 'success');
+                await loadTableData(); // Recharger les données
+            } else {
+                showNotification(result.error || 'Erreur lors de la suppression', 'error');
+            }
+        } catch (error) {
+            showNotification('Erreur de connexion', 'error');
+        }
+    }
+}
+
+function exportTable() {
+    showNotification('Export en cours de développement', 'info');
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showNotification(message, type) {
+    if (window.FlowERP && window.FlowERP.showNotification) {
+        window.FlowERP.showNotification(message, type);
+    } else {
+        alert(message);
+    }
+}
+
+// Fonction utilitaire pour récupérer le token CSRF
+function getCSRFToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+           document.querySelector('input[name="csrf_token"]')?.value ||
+           '{{ session.csrf_token }}';
+}
+
+// Load data on page load
+window.addEventListener('DOMContentLoaded', loadTableData);
+
+// Close modal on backdrop click
+document.getElementById('rowModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeRowModal();
+    }
+});
+
+// ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeRowModal();
+    }
+});
+</script>
+{% endblock %}

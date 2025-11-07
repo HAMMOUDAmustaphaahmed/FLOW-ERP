@@ -1,0 +1,633 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Utilisateurs - FlowERP{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <div>
+            <h1>👥 Gestion des Utilisateurs</h1>
+            <p>Créez et gérez les comptes utilisateurs</p>
+        </div>
+        <button class="btn btn-primary" onclick="openCreateUserModal()">
+            <span>+ Nouvel utilisateur</span>
+        </button>
+    </div>
+
+    <div class="users-table-container">
+        <table class="users-table" id="usersTable">
+            <thead>
+                <tr>
+                    <th>Utilisateur</th>
+                    <th>Email</th>
+                    <th>Rôle</th>
+                    <th>Département</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="usersTableBody">
+                <tr>
+                    <td colspan="6" class="loading">Chargement...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Create User -->
+<div id="createUserModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Créer un utilisateur</h2>
+            <span class="close" onclick="closeModal('createUserModal')">&times;</span>
+        </div>
+        <form id="createUserForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="username">Nom d'utilisateur *</label>
+                    <input type="text" id="username" name="username" required 
+                           placeholder="johndoe">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email *</label>
+                    <input type="email" id="email" name="email" required 
+                           placeholder="john.doe@company.com">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="first_name">Prénom</label>
+                    <input type="text" id="first_name" name="first_name" 
+                           placeholder="John">
+                </div>
+
+                <div class="form-group">
+                    <label for="last_name">Nom</label>
+                    <input type="text" id="last_name" name="last_name" 
+                           placeholder="Doe">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Mot de passe *</label>
+                <input type="password" id="password" name="password" required 
+                       placeholder="Min 8 caractères, majuscule, minuscule, chiffre, spécial">
+                <small>Le mot de passe doit contenir: majuscule, minuscule, chiffre et caractère spécial</small>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="role">Rôle</label>
+                    <select id="role" name="role">
+                        <option value="user">Utilisateur</option>
+                        <option value="manager">Manager</option>
+                        <option value="admin">Administrateur</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="department_id">Département</label>
+                    <select id="department_id" name="department_id">
+                        <option value="">Sans département</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Téléphone</label>
+                <input type="tel" id="phone" name="phone" 
+                       placeholder="+216 71 123 456">
+            </div>
+
+            <div class="form-group checkbox-group">
+                <label>
+                    <input type="checkbox" id="is_admin" name="is_admin">
+                    <span>Droits administrateur</span>
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" 
+                        onclick="closeModal('createUserModal')">
+                    Annuler
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Créer l'utilisateur
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Edit User -->
+<div id="editUserModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Modifier l'utilisateur</h2>
+            <span class="close" onclick="closeModal('editUserModal')">&times;</span>
+        </div>
+        <form id="editUserForm">
+            <input type="hidden" id="edit_user_id" name="user_id">
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="edit_first_name">Prénom</label>
+                    <input type="text" id="edit_first_name" name="first_name">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_last_name">Nom</label>
+                    <input type="text" id="edit_last_name" name="last_name">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="edit_email">Email</label>
+                <input type="email" id="edit_email" name="email">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="edit_role">Rôle</label>
+                    <select id="edit_role" name="role">
+                        <option value="user">Utilisateur</option>
+                        <option value="manager">Manager</option>
+                        <option value="admin">Administrateur</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit_department_id">Département</label>
+                    <select id="edit_department_id" name="department_id">
+                        <option value="">Sans département</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="edit_phone">Téléphone</label>
+                <input type="tel" id="edit_phone" name="phone">
+            </div>
+
+            <div class="form-group checkbox-group">
+                <label>
+                    <input type="checkbox" id="edit_is_admin" name="is_admin">
+                    <span>Droits administrateur</span>
+                </label>
+            </div>
+
+            <div class="form-group checkbox-group">
+                <label>
+                    <input type="checkbox" id="edit_is_active" name="is_active">
+                    <span>Compte actif</span>
+                </label>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" 
+                        onclick="closeModal('editUserModal')">
+                    Annuler
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .users-table-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        overflow: hidden;
+        margin-top: 2rem;
+    }
+
+    .users-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .users-table thead {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .users-table th {
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+    }
+
+    .users-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .users-table tbody tr:hover {
+        background: #f7fafc;
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    .user-details h4 {
+        margin: 0;
+        color: #2d3748;
+        font-size: 0.95rem;
+    }
+
+    .user-details p {
+        margin: 0.25rem 0 0 0;
+        color: #718096;
+        font-size: 0.85rem;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .badge-admin {
+        background: #667eea20;
+        color: #667eea;
+    }
+
+    .badge-manager {
+        background: #48bb7820;
+        color: #48bb78;
+    }
+
+    .badge-user {
+        background: #71809620;
+        color: #718096;
+    }
+
+    .status-active {
+        color: #48bb78;
+        font-weight: 600;
+    }
+
+    .status-inactive {
+        color: #f56565;
+        font-weight: 600;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .btn-icon {
+        padding: 0.5rem;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-icon:hover {
+        background: #e2e8f0;
+    }
+
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+    }
+
+    .checkbox-group label {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+        width: auto;
+    }
+
+    @media (max-width: 768px) {
+        .users-table {
+            font-size: 0.875rem;
+        }
+
+        .users-table th,
+        .users-table td {
+            padding: 0.75rem 0.5rem;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+
+<script>
+let users = [];
+let departments = [];
+
+window.addEventListener('DOMContentLoaded', () => {
+    loadDepartments();
+    loadUsers();
+});
+
+async function loadDepartments() {
+    try {
+        const response = await fetch('/department/list');
+        const data = await response.json();
+        
+        if (data.success) {
+            departments = data.departments;
+            populateDepartmentSelects();
+        }
+    } catch (error) {
+        console.error('Error loading departments:', error);
+    }
+}
+
+function populateDepartmentSelects() {
+    const selects = ['department_id', 'edit_department_id'];
+    
+    selects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        const currentValue = select.value;
+        
+        // Clear existing options except first
+        while (select.options.length > 1) {
+            select.remove(1);
+        }
+        
+        // Add department options
+        departments.forEach(dept => {
+            const option = document.createElement('option');
+            option.value = dept.id;
+            option.textContent = dept.name;
+            select.appendChild(option);
+        });
+        
+        // Restore value if exists
+        if (currentValue) {
+            select.value = currentValue;
+        }
+    });
+}
+
+async function loadUsers() {
+    try {
+        const response = await fetch('/users/list');
+        const data = await response.json();
+        
+        if (data.success) {
+            users = data.users;
+            renderUsers();
+        } else {
+            showNotification('Erreur lors du chargement', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Erreur de connexion', 'error');
+    }
+}
+
+function renderUsers() {
+    const tbody = document.getElementById('usersTableBody');
+    
+    if (users.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 2rem;">
+                    Aucun utilisateur trouvé
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = users.map(user => {
+        const initials = (user.first_name?.charAt(0) || '') + (user.last_name?.charAt(0) || user.username.charAt(0));
+        const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username;
+        const dept = departments.find(d => d.id === user.department_id);
+        
+        let roleBadge = '';
+        if (user.is_admin) {
+            roleBadge = '<span class="badge badge-admin">Admin</span>';
+        } else if (user.role === 'manager') {
+            roleBadge = '<span class="badge badge-manager">Manager</span>';
+        } else {
+            roleBadge = '<span class="badge badge-user">User</span>';
+        }
+        
+        return `
+            <tr>
+                <td>
+                    <div class="user-info">
+                        <div class="user-avatar">${initials.toUpperCase()}</div>
+                        <div class="user-details">
+                            <h4>${fullName}</h4>
+                            <p>@${user.username}</p>
+                        </div>
+                    </div>
+                </td>
+                <td>${user.email}</td>
+                <td>${roleBadge}</td>
+                <td>${dept ? dept.name : '<span style="color: #718096;">-</span>'}</td>
+                <td>
+                    <span class="${user.is_active ? 'status-active' : 'status-inactive'}">
+                        ${user.is_active ? '● Actif' : '● Inactif'}
+                    </span>
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon" onclick="editUser(${user.id})" title="Modifier">
+                            ✏️
+                        </button>
+                        <button class="btn-icon" onclick="resetPassword(${user.id})" title="Réinitialiser mot de passe">
+                            🔑
+                        </button>
+                        ${!user.is_active ? `
+                            <button class="btn-icon" onclick="deleteUser(${user.id})" title="Supprimer">
+                                🗑️
+                            </button>
+                        ` : ''}
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function openCreateUserModal() {
+    document.getElementById('createUserForm').reset();
+    openModal('createUserModal');
+}
+
+document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Convert checkboxes
+    data.is_admin = document.getElementById('is_admin').checked;
+    
+    // Remove empty department_id
+    if (!data.department_id) {
+        delete data.department_id;
+    }
+    
+    try {
+        const response = await fetch('/users/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Utilisateur créé avec succès!', 'success');
+            closeModal('createUserModal');
+            e.target.reset();
+            loadUsers();
+        } else {
+            showNotification(result.error || 'Erreur lors de la création', 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'error');
+        console.error('Error:', error);
+    }
+});
+
+function editUser(userId) {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    
+    document.getElementById('edit_user_id').value = user.id;
+    document.getElementById('edit_first_name').value = user.first_name || '';
+    document.getElementById('edit_last_name').value = user.last_name || '';
+    document.getElementById('edit_email').value = user.email;
+    document.getElementById('edit_phone').value = user.phone || '';
+    document.getElementById('edit_role').value = user.role;
+    document.getElementById('edit_department_id').value = user.department_id || '';
+    document.getElementById('edit_is_admin').checked = user.is_admin;
+    document.getElementById('edit_is_active').checked = user.is_active;
+    
+    openModal('editUserModal');
+}
+
+document.getElementById('editUserForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const userId = document.getElementById('edit_user_id').value;
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Convert checkboxes
+    data.is_admin = document.getElementById('edit_is_admin').checked;
+    data.is_active = document.getElementById('edit_is_active').checked;
+    
+    // Remove empty values
+    if (!data.department_id) {
+        delete data.department_id;
+    }
+    
+    try {
+        const response = await fetch(`/users/update/${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Utilisateur mis à jour!', 'success');
+            closeModal('editUserModal');
+            loadUsers();
+        } else {
+            showNotification(result.error || 'Erreur lors de la mise à jour', 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'error');
+        console.error('Error:', error);
+    }
+});
+
+async function resetPassword(userId) {
+    const newPassword = prompt('Entrez le nouveau mot de passe (min 8 caractères):');
+    if (!newPassword) return;
+    
+    try {
+        const response = await fetch(`/users/reset-password/${userId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ new_password: newPassword })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Mot de passe réinitialisé!', 'success');
+        } else {
+            showNotification(result.error || 'Erreur', 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'error');
+        console.error('Error:', error);
+    }
+}
+
+async function deleteUser(userId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) return;
+    
+    try {
+        const response = await fetch(`/users/delete/${userId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Utilisateur supprimé!', 'success');
+            loadUsers();
+        } else {
+            showNotification(result.error || 'Erreur', 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'error');
+        console.error('Error:', error);
+    }
+}
+</script>
+{% endblock %}
