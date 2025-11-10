@@ -61,9 +61,7 @@ def signup_admin():
     if not valid:
         return jsonify({'error': error_msg}), 400
     
-    # Validation du nom de l'entreprise
-    if not company_name:
-        return jsonify({'error': 'Le nom de l\'entreprise est obligatoire'}), 400
+   
     
     # Vérification de la sécurité SQL
     if not SecurityValidator.validate_sql_safe(username):

@@ -1,0 +1,1188 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Employés - FlowERP{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+/* Amélioration de la section des filtres */
+.filters-section {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+}
+
+.filters-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 1024px) {
+    .filters-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .filters-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Amélioration de la search box */
+.search-box {
+    position: relative;
+}
+
+.search-box i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.search-box input {
+    padding-left: 2.75rem;
+}
+
+.search-box input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* Amélioration des inputs et selects */
+.form-input, 
+select.form-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    transition: all var(--transition-fast);
+    outline: none;
+}
+
+.form-input:focus, 
+select.form-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-input:hover,
+select.form-input:hover {
+    border-color: var(--primary-color);
+}
+
+/* Style spécifique pour les selects */
+select.form-input {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 12px;
+    padding-right: 2.5rem;
+    cursor: pointer;
+}
+
+/* Input en erreur */
+.form-input.error {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.form-input.error:focus {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* Disabled state */
+.form-input:disabled,
+select.form-input:disabled {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Bouton réinitialiser amélioré */
+.btn-secondary.btn-sm {
+    padding: 0.65rem 1.25rem;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 2px solid var(--border-color);
+    transition: all var(--transition-fast);
+}
+
+.btn-secondary.btn-sm:hover {
+    border-color: var(--primary-color);
+    background: var(--bg-tertiary);
+}
+
+.users-table-container {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.users-table thead {
+    background: var(--bg-tertiary);
+}
+
+.users-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.users-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.users-table tbody tr {
+    transition: background var(--transition-fast);
+}
+
+.users-table tbody tr:hover {
+    background: var(--bg-tertiary);
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--border-radius-full);
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    margin-right: 0.75rem;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.user-username {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--border-radius);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge.admin {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge.department_manager {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.badge.employee {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge.technician {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.badge.active {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge.inactive {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.permissions-list {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
+.permission-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+}
+
+.permission-icon.granted {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.permission-icon.denied {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-icon-action {
+    padding: 0.5rem;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn-icon-action.edit {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.btn-icon-action.edit:hover {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-icon-action.delete {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.btn-icon-action.delete:hover {
+    background: #ef4444;
+    color: white;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.5rem;
+}
+
+.pagination button {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.pagination button:hover:not(:disabled) {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.pagination .page-info {
+    padding: 0.5rem 1rem;
+    color: var(--text-secondary);
+}
+
+/* Amélioration du modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(6px);
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-lg);
+    width: 90%;
+    max-width: 650px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border: 1px solid var(--border-color);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Amélioration du scrollbar pour le modal */
+.modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color);
+}
+
+/* Amélioration du modal header */
+.modal-header {
+    padding: 1.75rem;
+    border-bottom: 2px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-tertiary);
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    font-size: 1.75rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 0.5rem;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius);
+    transition: all var(--transition-fast);
+}
+
+.modal-close:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+/* Modal body */
+.modal-body {
+    padding: 2rem;
+}
+
+/* Modal footer */
+.modal-footer {
+    padding: 1.5rem 2rem;
+    border-top: 2px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    background: var(--bg-tertiary);
+}
+
+.form-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.form-grid.two-cols {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+@media (max-width: 640px) {
+    .form-grid.two-cols {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Amélioration du form group */
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 0.375rem;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.form-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    margin-right: 0.5rem;
+    accent-color: var(--primary-color);
+}
+
+/* Amélioration des permissions */
+.permissions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.permission-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem;
+    background: var(--bg-tertiary);
+    border: 2px solid transparent;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.permission-checkbox:hover {
+    background: var(--bg-secondary);
+    border-color: var(--primary-color);
+}
+
+.permission-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+.permission-checkbox label {
+    margin: 0;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    flex: 1;
+}
+
+/* Section permissions avec titre */
+#permissionsSection {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+#permissionsSection > label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+}
+
+/* Amélioration des boutons */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 2px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    background: var(--bg-secondary);
+    border-color: var(--primary-color);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+}
+
+.loading i {
+    font-size: 2rem;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Gestion des Employés</h1>
+        <p class="text-secondary">Gérez les utilisateurs et leurs permissions</p>
+    </div>
+    <button class="btn btn-primary" onclick="openAddUserModal()">
+        <i class="fas fa-plus"></i> Ajouter un employé
+    </button>
+</div>
+
+<!-- Filtres et recherche -->
+<div class="filters-section">
+    <div class="filters-grid">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input 
+                type="text" 
+                id="searchInput" 
+                class="form-input" 
+                placeholder="Rechercher par nom, email, username..."
+            >
+        </div>
+        
+        <select id="roleFilter" class="form-input">
+            <option value="">Tous les rôles</option>
+            <option value="admin">Administrateur</option>
+            <option value="department_manager">Chef de département</option>
+            <option value="employee">Employé</option>
+            <option value="technician">Technicien</option>
+        </select>
+        
+        <select id="departmentFilter" class="form-input">
+            <option value="">Tous les départements</option>
+        </select>
+        
+        <select id="statusFilter" class="form-input">
+            <option value="">Tous les statuts</option>
+            <option value="active">Actif</option>
+            <option value="inactive">Inactif</option>
+        </select>
+    </div>
+    
+    <button class="btn btn-secondary btn-sm" onclick="resetFilters()">
+        <i class="fas fa-redo"></i> Réinitialiser
+    </button>
+</div>
+
+<!-- Tableau des utilisateurs -->
+<div class="users-table-container">
+    <table class="users-table">
+        <thead>
+            <tr>
+                <th>Employé</th>
+                <th>Rôle</th>
+                <th>Département</th>
+                <th>Contact</th>
+                <th>Accès</th>
+                <th>Statut</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="usersTableBody">
+            <tr>
+                <td colspan="7" class="loading">
+                    <i class="fas fa-spinner"></i>
+                    <p>Chargement des utilisateurs...</p>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <div class="pagination" id="pagination"></div>
+</div>
+
+<!-- Modal Ajouter/Modifier Utilisateur -->
+<div id="userModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modalTitle">Ajouter un employé</h2>
+            <button class="modal-close" onclick="closeUserModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <form id="userForm" class="form-grid">
+                <input type="hidden" id="userId">
+                
+                <div class="form-grid two-cols">
+                    <div class="form-group">
+                        <label>Prénom *</label>
+                        <input type="text" id="firstName" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Nom *</label>
+                        <input type="text" id="lastName" class="form-input" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Nom d'utilisateur *</label>
+                    <input type="text" id="username" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" id="email" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Téléphone</label>
+                    <input type="tel" id="phone" class="form-input">
+                </div>
+                
+                <div class="form-group" id="passwordGroup">
+                    <label>Mot de passe *</label>
+                    <input type="password" id="password" class="form-input" required>
+                    <small>Min. 8 caractères, 1 majuscule, 1 minuscule, 1 chiffre, 1 caractère spécial</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Rôle *</label>
+                    <select id="role" class="form-input" required onchange="handleRoleChange()">
+                        <option value="">Sélectionner un rôle</option>
+                        <option value="admin">Administrateur</option>
+                        <option value="department_manager">Chef de département</option>
+                        <option value="employee">Employé</option>
+                        <option value="technician">Technicien (lecture seule)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="departmentGroup">
+                    <label>Département *</label>
+                    <select id="department" class="form-input" required>
+                        <option value="">Sélectionner un département</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="isActive" checked>
+                        Compte actif
+                    </label>
+                </div>
+                
+                <div id="permissionsSection">
+                    <label>Permissions personnalisées</label>
+                    <div class="permissions-grid">
+                        <div class="permission-checkbox">
+                            <input type="checkbox" id="canRead">
+                            <label for="canRead">Lire</label>
+                        </div>
+                        <div class="permission-checkbox">
+                            <input type="checkbox" id="canWrite">
+                            <label for="canWrite">Écrire</label>
+                        </div>
+                        <div class="permission-checkbox">
+                            <input type="checkbox" id="canCreate">
+                            <label for="canCreate">Créer</label>
+                        </div>
+                        <div class="permission-checkbox">
+                            <input type="checkbox" id="canUpdate">
+                            <label for="canUpdate">Modifier</label>
+                        </div>
+                        <div class="permission-checkbox">
+                            <input type="checkbox" id="canDelete">
+                            <label for="canDelete">Supprimer</label>
+                        </div>
+                        <div class="permission-checkbox">
+                            <input type="checkbox" id="canAddTables">
+                            <label for="canAddTables">Ajouter tables</label>
+                        </div>
+                        <div class="permission-checkbox">
+                            <input type="checkbox" id="canAddColumns">
+                            <label for="canAddColumns">Ajouter colonnes</label>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeUserModal()">Annuler</button>
+            <button class="btn btn-primary" onclick="saveUser()">
+                <i class="fas fa-save"></i> Enregistrer
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let totalPages = 1;
+let searchTimeout;
+
+// Charger les départements pour les filtres
+async function loadDepartments() {
+    try {
+        const response = await fetch('/department/list');
+        const data = await response.json();
+        
+        if (data.success) {
+            const departmentFilter = document.getElementById('departmentFilter');
+            const departmentSelect = document.getElementById('department');
+            
+            data.departments.forEach(dept => {
+                const option = new Option(dept.name, dept.id);
+                departmentFilter.add(option.cloneNode(true));
+                departmentSelect.add(option);
+            });
+        }
+    } catch (error) {
+        console.error('Erreur chargement départements:', error);
+    }
+}
+
+// Charger les utilisateurs
+async function loadUsers(page = 1) {
+    try {
+        const search = document.getElementById('searchInput').value;
+        const role = document.getElementById('roleFilter').value;
+        const department = document.getElementById('departmentFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        
+        const params = new URLSearchParams({
+            page: page,
+            per_page: 20,
+            ...(search && { search }),
+            ...(role && { role }),
+            ...(department && { department_id: department }),
+            ...(status && { status })
+        });
+        
+        const response = await fetch(`/users/list?${params}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            displayUsers(data.users);
+            updatePagination(data.page, data.pages, data.total);
+            currentPage = data.page;
+            totalPages = data.pages;
+        }
+    } catch (error) {
+        console.error('Erreur chargement utilisateurs:', error);
+        showError('Erreur lors du chargement des utilisateurs');
+    }
+}
+
+// Afficher les utilisateurs
+function displayUsers(users) {
+    const tbody = document.getElementById('usersTableBody');
+    
+    if (users.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="empty-state">
+                    <i class="fas fa-users"></i>
+                    <p>Aucun utilisateur trouvé</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = users.map(user => {
+        const initials = (user.first_name?.[0] || '') + (user.last_name?.[0] || '') || user.username[0];
+        const roleColors = {
+            'admin': 'admin',
+            'department_manager': 'department_manager',
+            'employee': 'employee',
+            'technician': 'technician'
+        };
+        
+        return `
+            <tr>
+                <td>
+                    <div class="user-info">
+                        <div class="user-avatar">${initials.toUpperCase()}</div>
+                        <div class="user-details">
+                            <div class="user-name">${user.full_name}</div>
+                            <div class="user-username">@${user.username}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge ${roleColors[user.role]}">${user.role_display}</span>
+                </td>
+                <td>${user.department_name || '-'}</td>
+                <td>
+                    <div>${user.email}</div>
+                    <small class="text-secondary">${user.phone || '-'}</small>
+                </td>
+                <td>
+                    <div class="permissions-list" title="${getPermissionsTitle(user.permissions)}">
+                        ${getPermissionIcons(user.permissions)}
+                    </div>
+                </td>
+                <td>
+                    <span class="badge ${user.is_active ? 'active' : 'inactive'}">
+                        ${user.is_active ? 'Actif' : 'Inactif'}
+                    </span>
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn-icon-action edit" onclick="editUser(${user.id})" title="Modifier">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon-action delete" onclick="deleteUser(${user.id}, '${user.full_name}')" title="Supprimer">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Icônes des permissions
+function getPermissionIcons(permissions) {
+    const icons = {
+        read: 'fa-eye',
+        write: 'fa-pen',
+        create: 'fa-plus',
+        update: 'fa-edit',
+        delete: 'fa-trash',
+        add_tables: 'fa-table',
+        add_columns: 'fa-columns'
+    };
+    
+    return Object.entries(icons).map(([perm, icon]) => {
+        const granted = permissions[perm];
+        return `<span class="permission-icon ${granted ? 'granted' : 'denied'}">
+            <i class="fas ${icon}"></i>
+        </span>`;
+    }).join('');
+}
+
+function getPermissionsTitle(permissions) {
+    const labels = {
+        read: 'Lecture',
+        write: 'Écriture',
+        create: 'Création',
+        update: 'Modification',
+        delete: 'Suppression',
+        add_tables: 'Tables',
+        add_columns: 'Colonnes'
+    };
+    
+    return Object.entries(permissions)
+        .filter(([_, value]) => value)
+        .map(([key, _]) => labels[key])
+        .join(', ');
+}
+
+// Pagination
+function updatePagination(currentPage, totalPages, totalItems) {
+    const pagination = document.getElementById('pagination');
+    
+    pagination.innerHTML = `
+        <button ${currentPage === 1 ? 'disabled' : ''} onclick="loadUsers(${currentPage - 1})">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <span class="page-info">Page ${currentPage} sur ${totalPages} (${totalItems} résultats)</span>
+        <button ${currentPage === totalPages ? 'disabled' : ''} onclick="loadUsers(${currentPage + 1})">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    `;
+}
+
+// Recherche dynamique
+document.getElementById('searchInput').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        loadUsers(1);
+    }, 300);
+});
+
+// Filtres
+document.getElementById('roleFilter').addEventListener('change', () => loadUsers(1));
+document.getElementById('departmentFilter').addEventListener('change', () => loadUsers(1));
+document.getElementById('statusFilter').addEventListener('change', () => loadUsers(1));
+
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('roleFilter').value = '';
+    document.getElementById('departmentFilter').value = '';
+    document.getElementById('statusFilter').value = '';
+    loadUsers(1);
+}
+
+// Modal gestion
+function openAddUserModal() {
+    document.getElementById('modalTitle').textContent = 'Ajouter un employé';
+    document.getElementById('userForm').reset();
+    document.getElementById('userId').value = '';
+    document.getElementById('passwordGroup').style.display = 'block';
+    document.getElementById('password').required = true;
+    document.getElementById('isActive').checked = true;
+    document.getElementById('userModal').classList.add('active');
+}
+
+function closeUserModal() {
+    document.getElementById('userModal').classList.remove('active');
+}
+
+async function editUser(userId) {
+    try {
+        const response = await fetch(`/users/get/${userId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const user = data.user;
+            document.getElementById('modalTitle').textContent = 'Modifier l\'employé';
+            document.getElementById('userId').value = user.id;
+            document.getElementById('firstName').value = user.first_name || '';
+            document.getElementById('lastName').value = user.last_name || '';
+            document.getElementById('username').value = user.username;
+            document.getElementById('email').value = user.email;
+            document.getElementById('phone').value = user.phone || '';
+            document.getElementById('role').value = user.role;
+            document.getElementById('department').value = user.department_id || '';
+            document.getElementById('isActive').checked = user.is_active;
+            
+            // Permissions
+            Object.entries(user.permissions).forEach(([perm, value]) => {
+                const checkbox = document.getElementById(`can${perm.charAt(0).toUpperCase() + perm.slice(1).replace('_', '')}`);
+                if (checkbox) checkbox.checked = value;
+            });
+            
+            document.getElementById('passwordGroup').style.display = 'none';
+            document.getElementById('password').required = false;
+            handleRoleChange();
+            document.getElementById('userModal').classList.add('active');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors du chargement de l\'utilisateur');
+    }
+}
+
+async function saveUser() {
+    const userId = document.getElementById('userId').value;
+    const isEdit = !!userId;
+    
+    const userData = {
+        first_name: document.getElementById('firstName').value,
+        last_name: document.getElementById('lastName').value,
+        username: document.getElementById('username').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value,
+        role: document.getElementById('role').value,
+        department_id: document.getElementById('department').value || null,
+        is_active: document.getElementById('isActive').checked,
+        permissions: {
+            read: document.getElementById('canRead').checked,
+            write: document.getElementById('canWrite').checked,
+            create: document.getElementById('canCreate').checked,
+            update: document.getElementById('canUpdate').checked,
+            delete: document.getElementById('canDelete').checked,
+            add_tables: document.getElementById('canAddTables').checked,
+            add_columns: document.getElementById('canAddColumns').checked
+        }
+    };
+    
+    if (!isEdit) {
+        userData.password = document.getElementById('password').value;
+    }
+    
+    try {
+        const url = isEdit ? `/users/update/${userId}` : '/users/create';
+        const method = isEdit ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess(data.message);
+            closeUserModal();
+            loadUsers(currentPage);
+        } else {
+            showError(data.error);
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors de l\'enregistrement');
+    }
+}
+
+async function deleteUser(userId, userName) {
+    if (!confirm(`Êtes-vous sûr de vouloir désactiver ${userName} ?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/users/delete/${userId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showSuccess(data.message);
+            loadUsers(currentPage);
+        } else {
+            showError(data.error);
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError('Erreur lors de la suppression');
+    }
+}
+
+function handleRoleChange() {
+    const role = document.getElementById('role').value;
+    const departmentGroup = document.getElementById('departmentGroup');
+    const permissionsSection = document.getElementById('permissionsSection');
+    
+    // Département obligatoire sauf pour admin
+    if (role === 'admin') {
+        departmentGroup.style.display = 'none';
+        document.getElementById('department').required = false;
+    } else {
+        departmentGroup.style.display = 'block';
+        document.getElementById('department').required = true;
+    }
+    
+    // Pré-remplir les permissions selon le rôle
+    const rolePermissions = {
+        'admin': { read: true, write: true, create: true, update: true, delete: true, add_tables: true, add_columns: true },
+        'department_manager': { read: true, write: true, create: true, update: true, delete: true, add_tables: true, add_columns: true },
+        'employee': { read: true, write: true, create: true, update: true, delete: false, add_tables: false, add_columns: false },
+        'technician': { read: true, write: false, create: false, update: false, delete: false, add_tables: false, add_columns: false }
+    };
+    
+    if (rolePermissions[role]) {
+        Object.entries(rolePermissions[role]).forEach(([perm, value]) => {
+            const checkbox = document.getElementById(`can${perm.charAt(0).toUpperCase() + perm.slice(1).replace('_', '')}`);
+            if (checkbox) checkbox.checked = value;
+        });
+    }
+}
+
+function showSuccess(message) {
+    // Implémentez votre système de notification
+    alert(message);
+}
+
+function showError(message) {
+    // Implémentez votre système de notification
+    alert(message);
+}
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    loadDepartments();
+    loadUsers();
+});
+</script>
+{% endblock %}

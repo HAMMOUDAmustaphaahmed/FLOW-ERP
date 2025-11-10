@@ -5,10 +5,8 @@ from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
 import os
 from datetime import timedelta
-from database import db
 from config import config
-
-
+from database import db
 
 # Import des routes
 from routes.auth import auth_bp
