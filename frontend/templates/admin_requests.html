@@ -1,0 +1,593 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion des Demandes - FlowERP{% endblock %}
+
+{% block extra_css %}
+<style>
+.requests-admin-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.page-header-admin {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.stats-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card-admin {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid;
+}
+
+.stat-card-admin.pending {
+    border-left-color: #f59e0b;
+}
+
+.stat-card-admin.approved {
+    border-left-color: #10b981;
+}
+
+.stat-card-admin.rejected {
+    border-left-color: #ef4444;
+}
+
+.stat-card-admin.total {
+    border-left-color: #3b82f6;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label-admin {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+.filters-bar {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.filters-grid-admin {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+.request-card-admin {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.request-card-admin:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.request-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.request-user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.request-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+}
+
+.request-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.badge-loan {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-leave {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.badge-permission {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.request-details {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.detail-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.request-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.btn-approve {
+    background: #10b981;
+    color: white;
+}
+
+.btn-approve:hover {
+    background: #059669;
+}
+
+.btn-reject {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-reject:hover {
+    background: #dc2626;
+}
+
+@media (max-width: 1024px) {
+    .stats-cards,
+    .filters-grid-admin {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .stats-cards,
+    .filters-grid-admin {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="requests-admin-container">
+    <div class="page-header-admin">
+        <div>
+            <h1><i class="fas fa-tasks"></i> Gestion des Demandes</h1>
+            <p>Approuvez ou rejetez les demandes des employés</p>
+        </div>
+        <button class="btn btn-primary" onclick="exportRequests()">
+            <i class="fas fa-download"></i> Exporter
+        </button>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="stats-cards">
+        <div class="stat-card-admin pending">
+            <div class="stat-number" id="pendingCount">0</div>
+            <div class="stat-label-admin">En attente</div>
+        </div>
+        <div class="stat-card-admin approved">
+            <div class="stat-number" id="approvedCount">0</div>
+            <div class="stat-label-admin">Approuvées</div>
+        </div>
+        <div class="stat-card-admin rejected">
+            <div class="stat-number" id="rejectedCount">0</div>
+            <div class="stat-label-admin">Rejetées</div>
+        </div>
+        <div class="stat-card-admin total">
+            <div class="stat-number" id="totalCount">0</div>
+            <div class="stat-label-admin">Total</div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="filters-bar">
+        <div class="filters-grid-admin">
+            <select id="statusFilter" class="form-input" onchange="loadRequests()">
+                <option value="">Tous les statuts</option>
+                <option value="pending" selected>En attente</option>
+                <option value="approved">Approuvé</option>
+                <option value="rejected">Rejeté</option>
+            </select>
+            
+            <select id="typeFilter" class="form-input" onchange="loadRequests()">
+                <option value="">Tous les types</option>
+                <option value="loan">Prêt d'argent</option>
+                <option value="leave">Congé</option>
+                <option value="permission">Permission</option>
+            </select>
+            
+            <select id="departmentFilter" class="form-input" onchange="loadRequests()">
+                <option value="">Tous les départements</option>
+            </select>
+            
+            <button class="btn btn-secondary" onclick="resetFilters()">
+                <i class="fas fa-redo"></i> Réinitialiser
+            </button>
+        </div>
+    </div>
+
+    <!-- Liste des demandes -->
+    <div id="requestsList">
+        <div style="text-align: center; padding: 3rem;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+            <p>Chargement des demandes...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Commentaire -->
+<div id="commentModal" class="modal-overlay">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h2 id="commentModalTitle"><i class="fas fa-comment"></i> Commentaire</h2>
+            <button class="modal-close-btn" onclick="closeCommentModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="commentRequestId">
+            <input type="hidden" id="commentAction">
+            
+            <div class="form-group-profile">
+                <label>Commentaire (optionnel)</label>
+                <textarea id="commentText" class="form-control" rows="4" 
+                          placeholder="Ajoutez un commentaire pour l'employé..."></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeCommentModal()">
+                    Annuler
+                </button>
+                <button type="button" class="btn-primary-gradient" onclick="submitDecision()">
+                    Confirmer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let requests = [];
+
+// Charger les départements
+async function loadDepartments() {
+    try {
+        const response = await fetch('/department/list');
+        const data = await response.json();
+        
+        if (data.success) {
+            const select = document.getElementById('departmentFilter');
+            data.departments.forEach(dept => {
+                const option = document.createElement('option');
+                option.value = dept.id;
+                option.textContent = dept.name;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Erreur chargement départements:', error);
+    }
+}
+
+// Charger les demandes
+async function loadRequests() {
+    const status = document.getElementById('statusFilter').value;
+    const type = document.getElementById('typeFilter').value;
+    const department = document.getElementById('departmentFilter').value;
+    
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (type) params.append('type', type);
+    if (department) params.append('department_id', department);
+    
+    try {
+        const response = await fetch(`/api/employee-requests/all?${params}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            requests = data.requests;
+            displayRequests(requests);
+        }
+    } catch (error) {
+        console.error('Erreur chargement demandes:', error);
+        showNotification('Erreur lors du chargement', 'error');
+    }
+}
+
+// Charger les statistiques
+async function loadStats() {
+    try {
+        const response = await fetch('/api/employee-requests/admin/dashboard');
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('pendingCount').textContent = data.stats.pending;
+            document.getElementById('approvedCount').textContent = data.stats.approved;
+            document.getElementById('rejectedCount').textContent = data.stats.rejected;
+            document.getElementById('totalCount').textContent = 
+                data.stats.pending + data.stats.approved + data.stats.rejected;
+        }
+    } catch (error) {
+        console.error('Erreur chargement stats:', error);
+    }
+}
+
+// Afficher les demandes
+function displayRequests(requests) {
+    const container = document.getElementById('requestsList');
+    
+    if (requests.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 3rem; background: white; border-radius: 12px;">
+                <i class="fas fa-inbox" style="font-size: 3rem; color: var(--text-secondary);"></i>
+                <p>Aucune demande trouvée</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const typeIcons = {
+        loan: 'fa-hand-holding-usd',
+        leave: 'fa-umbrella-beach',
+        permission: 'fa-clock'
+    };
+    
+    const typeLabels = {
+        loan: 'Prêt d\'argent',
+        leave: 'Congé',
+        permission: 'Permission'
+    };
+    
+    container.innerHTML = requests.map(request => {
+        let details = '';
+        
+        if (request.type === 'loan') {
+            details = `
+                <div class="detail-row">
+                    <span class="detail-label">Type:</span>
+                    <span>${request.loan_type === 'salary' ? 'Avance sur salaire' : 'Avance sur prime'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Montant:</span>
+                    <strong style="color: #10b981;">${request.amount} TND</strong>
+                </div>
+            `;
+        } else if (request.type === 'leave') {
+            details = `
+                <div class="detail-row">
+                    <span class="detail-label">Type:</span>
+                    <span>${request.leave_type === 'paid' ? 'Congé payé' : 
+                            request.leave_type === 'sick' ? 'Congé maladie' : 'Congé exceptionnel'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Période:</span>
+                    <span>${new Date(request.start_date).toLocaleDateString()} - ${new Date(request.end_date).toLocaleDateString()}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Durée:</span>
+                    <strong>${request.days} jour${request.days > 1 ? 's' : ''}</strong>
+                </div>
+            `;
+        } else if (request.type === 'permission') {
+            details = `
+                <div class="detail-row">
+                    <span class="detail-label">Date:</span>
+                    <span>${new Date(request.date).toLocaleDateString()}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Horaire:</span>
+                    <span>${request.start_time} - ${request.end_time}</span>
+                </div>
+            `;
+        }
+        
+        const initials = request.user_name.split(' ').map(n => n[0]).join('').toUpperCase();
+        
+        return `
+            <div class="request-card-admin">
+                <div class="request-header">
+                    <div class="request-user-info">
+                        <div class="request-avatar">${initials}</div>
+                        <div>
+                            <strong>${request.user_name}</strong>
+                            <div style="color: var(--text-secondary); font-size: 0.875rem;">
+                                ${new Date(request.created_at).toLocaleDateString('fr-FR')} à 
+                                ${new Date(request.created_at).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}
+                            </div>
+                        </div>
+                    </div>
+                    <span class="request-type-badge badge-${request.type}">
+                        <i class="fas ${typeIcons[request.type]}"></i>
+                        ${typeLabels[request.type]}
+                    </span>
+                </div>
+                
+                <div class="request-details">
+                    ${details}
+                    ${request.reason ? `
+                        <div class="detail-row" style="margin-top: 1rem;">
+                            <span class="detail-label">Raison:</span>
+                        </div>
+                        <div style="padding: 0.75rem; background: white; border-radius: 6px; margin-top: 0.5rem;">
+                            ${request.reason}
+                        </div>
+                    ` : ''}
+                </div>
+                
+                ${request.status === 'pending' ? `
+                    <div class="request-actions">
+                        <button class="btn btn-approve" onclick="openCommentModal(${request.id}, 'approve')">
+                            <i class="fas fa-check"></i> Approuver
+                        </button>
+                        <button class="btn btn-reject" onclick="openCommentModal(${request.id}, 'reject')">
+                            <i class="fas fa-times"></i> Rejeter
+                        </button>
+                    </div>
+                ` : `
+                    <div style="margin-top: 1rem; padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <span class="status-badge status-${request.status}">
+                                ${request.status === 'approved' ? 'Approuvé' : 'Rejeté'}
+                            </span>
+                            <span style="color: var(--text-secondary); font-size: 0.875rem;">
+                                par ${request.approved_by_name} le ${new Date(request.approved_at).toLocaleDateString()}
+                            </span>
+                        </div>
+                        ${request.admin_comment ? `
+                            <div style="padding: 0.75rem; background: white; border-radius: 6px;">
+                                <strong style="font-size: 0.875rem;">Commentaire:</strong>
+                                <p style="margin: 0.5rem 0 0 0; font-size: 0.875rem;">${request.admin_comment}</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                `}
+            </div>
+        `;
+    }).join('');
+}
+
+// Modal commentaire
+function openCommentModal(requestId, action) {
+    document.getElementById('commentRequestId').value = requestId;
+    document.getElementById('commentAction').value = action;
+    document.getElementById('commentText').value = '';
+    document.getElementById('commentModalTitle').innerHTML = 
+        action === 'approve' ? 
+        '<i class="fas fa-check-circle"></i> Approuver la demande' : 
+        '<i class="fas fa-times-circle"></i> Rejeter la demande';
+    document.getElementById('commentModal').classList.add('active');
+}
+
+function closeCommentModal() {
+    document.getElementById('commentModal').classList.remove('active');
+}
+
+async function submitDecision() {
+    const requestId = document.getElementById('commentRequestId').value;
+    const action = document.getElementById('commentAction').value;
+    const comment = document.getElementById('commentText').value;
+    
+    try {
+        const response = await fetch(`/api/employee-requests/${action}/${requestId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ comment })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification(
+                action === 'approve' ? 'Demande approuvée!' : 'Demande rejetée',
+                'success'
+            );
+            closeCommentModal();
+            loadRequests();
+            loadStats();
+        } else {
+            showNotification(result.error || 'Erreur', 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'error');
+    }
+}
+
+function resetFilters() {
+    document.getElementById('statusFilter').value = 'pending';
+    document.getElementById('typeFilter').value = '';
+    document.getElementById('departmentFilter').value = '';
+    loadRequests();
+}
+
+function exportRequests() {
+    showNotification('Export en cours de développement', 'info');
+}
+
+function showNotification(message, type) {
+    if (window.FlowERP && window.FlowERP.showNotification) {
+        window.FlowERP.showNotification(message, type);
+    } else {
+        alert(message);
+    }
+}
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    loadDepartments();
+    loadRequests();
+    loadStats();
+    
+    // Auto-refresh toutes les 30 secondes
+    setInterval(() => {
+        loadRequests();
+        loadStats();
+    }, 30000);
+});
+
+// Fermer modal sur backdrop
+document.getElementById('commentModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeCommentModal();
+    }
+});
+
+// Fermer avec ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeCommentModal();
+    }
+});
+</script>
+{% endblock %}

@@ -16,6 +16,7 @@ from routes.dashboard import dashboard_bp
 from routes.users import users_bp
 from routes.department_tables import dept_tables_bp
 from routes.department_managers import dept_managers_bp
+from routes.employee_requests import employee_requests_bp
 
 def get_blockchain():
     """Fonction pour obtenir l'instance blockchain sans import circulaire"""
@@ -56,6 +57,9 @@ def create_app(config_name='development'):
     app.register_blueprint(users_bp)
     app.register_blueprint(dept_tables_bp)
     app.register_blueprint(dept_managers_bp)
+    app.register_blueprint(employee_requests_bp)
+    
+
     
     # Créer les tables
     with app.app_context():
@@ -104,6 +108,60 @@ def create_app(config_name='development'):
         """Page de gestion des départements"""
         if 'user_id' not in session:
             return redirect(url_for('auth.login_page'))
+        
+        from models.user import User
+        user = User.query.get(session['user_id'])
+        
+        if not user or not user.is_active:
+            session.clear()
+            return redirect(url_for('auth.login_page'))
+        
+        return render_template('department.html', user=user)
+    
+    @app.route('/profile')
+    def profile():
+        """Page de profil utilisateur"""
+        if 'user_id' not in session:
+            return redirect(url_for('auth.login_page'))
+        
+        from models.user import User
+        from models.employee_request import EmployeeRequest
+        from datetime import datetime
+        
+        user = User.query.get(session['user_id'])
+        if not user or not user.is_active:
+            session.clear()
+            return redirect(url_for('auth.login_page'))
+        
+        days_in_company = (datetime.utcnow() - user.created_at).days
+        pending_requests = EmployeeRequest.query.filter_by(user_id=user.id, status='pending').count()
+        total_leave_days = 30
+        used_leave_days = db.session.query(db.func.sum(EmployeeRequest.days)).filter(
+            EmployeeRequest.user_id == user.id, EmployeeRequest.type == 'leave',
+            EmployeeRequest.status == 'approved',
+            EmployeeRequest.created_at >= datetime(datetime.utcnow().year, 1, 1)
+        ).scalar() or 0
+        remaining_leaves = total_leave_days - used_leave_days
+        
+        return render_template('profile.html', user=user, days_in_company=days_in_company,
+                            pending_requests=pending_requests, remaining_leaves=remaining_leaves)
+
+    @app.route('/admin/requests')
+    def admin_requests_page():
+        """Page admin pour gérer toutes les demandes"""
+        if 'user_id' not in session:
+            return redirect(url_for('auth.login_page'))
+        
+        from models.user import User
+        user = User.query.get(session['user_id'])
+        if not user or not user.is_active:
+            session.clear()
+            return redirect(url_for('auth.login_page'))
+        
+        if not user.is_admin and user.role != 'department_manager':
+            return redirect(url_for('dashboard'))
+        
+        return render_template('admin_requests.html', user=user)
         
         return render_template('department.html')
     @app.route('/department-settings/<int:dept_id>')
@@ -281,6 +339,14 @@ def create_app(config_name='development'):
             return dict(current_user=user)
         return dict(current_user=None)
     
+    @app.context_processor
+    def inject_pending_requests():
+        if 'user_id' in session:
+            from models.employee_request import EmployeeRequest
+            count = EmployeeRequest.query.filter_by(status='pending').count()
+            return dict(pending_requests_count=count)
+        return dict(pending_requests_count=0)
+    
     # Commande CLI pour initialiser la base de données
     @app.cli.command()
     def init_db():
@@ -311,6 +377,7 @@ def create_app(config_name='development'):
         print(f'Administrateur {username} créé avec succès!')
     
     return app
+
 
 # Point d'entrée pour le serveur de développement
 if __name__ == '__main__':

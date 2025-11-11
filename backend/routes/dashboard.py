@@ -342,3 +342,30 @@ def get_performance_metrics():
             'total_items': total_items
         }
     }), 200
+
+# Dans routes/dashboard.py ou similaire
+
+@dashboard_bp.route('/api/analytics/data', methods=['GET'])
+def get_analytics_data():
+    """Récupérer toutes les données analytics"""
+    time_filter = request.args.get('time_filter', 'week')
+    department_id = request.args.get('department_id')
+    
+    # Logique pour récupérer les données selon les filtres
+    # ...
+    
+    return jsonify({
+        'success': True,
+        'data': analytics_data
+    })
+
+@dashboard_bp.route('/api/export/report', methods=['POST'])
+def export_report():
+    """Générer et télécharger un rapport"""
+    data = request.get_json()
+    format_type = data.get('format')
+    
+    # Logique pour générer le rapport
+    # Utiliser des librairies comme reportlab (PDF), openpyxl (Excel)
+    
+    return send_file(report_file, as_attachment=True)

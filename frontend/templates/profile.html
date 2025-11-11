@@ -1,0 +1,1400 @@
+{% extends "base.html" %}
+
+{% block title %}Mon Profil - FlowERP{% endblock %}
+
+{% block extra_css %}
+<style>
+.profile-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.profile-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 3rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.profile-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 400px;
+    height: 400px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+}
+
+.profile-header-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.profile-avatar-large {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: 700;
+    color: #667eea;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.profile-avatar-large:hover {
+    transform: scale(1.05);
+}
+
+.profile-info {
+    flex: 1;
+    color: white;
+}
+
+.profile-name {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.profile-role {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 1rem;
+}
+
+.profile-stats {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+
+.profile-stat {
+    text-align: center;
+}
+
+.profile-stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.profile-stat-label {
+    font-size: 0.875rem;
+    opacity: 0.8;
+}
+
+.profile-content {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 2rem;
+}
+
+.profile-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.profile-menu {
+    background: white;
+    border-radius: 12px;
+    padding: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.profile-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.profile-menu-item:hover {
+    background: var(--bg-tertiary);
+}
+
+.profile-menu-item.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.profile-menu-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: var(--bg-tertiary);
+    font-size: 1.2rem;
+}
+
+.profile-menu-item.active .profile-menu-icon {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.profile-main {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.section-hidden {
+    display: none;
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.info-item {
+    padding: 1.25rem;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.info-item:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.info-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-value {
+    font-size: 1.125rem;
+    color: var(--text-primary);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.request-card {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.request-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+}
+
+.request-card h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    font-size: 1.25rem;
+}
+
+.request-card-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    font-size: 1.5rem;
+}
+
+.icon-money {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.icon-vacation {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+}
+
+.icon-permission {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+}
+
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.form-group-profile {
+    margin-bottom: 1.25rem;
+}
+
+.form-group-profile label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.form-group-profile input,
+.form-group-profile select,
+.form-group-profile textarea {
+    width: 100%;
+    padding: 0.875rem;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.form-group-profile input:focus,
+.form-group-profile select:focus,
+.form-group-profile textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-group-profile textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.btn-primary-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.875rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-primary-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary-gradient:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.request-history {
+    margin-top: 2rem;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.history-table thead {
+    background: var(--bg-tertiary);
+}
+
+.history-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.history-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.375rem 0.875rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-approved {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.quick-action-btn {
+    padding: 1.5rem;
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.quick-action-btn:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+}
+
+.quick-action-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 1.75rem;
+}
+
+.permissions-display {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.permission-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.permission-icon-status {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+
+.permission-granted {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.permission-denied {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.alert-info {
+    background: #dbeafe;
+    color: #1e40af;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* Styles pour les modals */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-dialog {
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: modalSlideUp 0.3s ease;
+}
+
+@keyframes modalSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-header {
+    padding: 2rem;
+    border-bottom: 2px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 16px 16px 0 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.modal-close-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    font-size: 1.25rem;
+    transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    border-radius: 6px;
+}
+
+.btn-icon:hover {
+    background: var(--bg-tertiary);
+    color: var(--primary-color);
+}
+
+@media (max-width: 768px) {
+    .profile-content {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-header-content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .profile-stats {
+        justify-content: center;
+    }
+
+    .info-grid,
+    .form-grid-2,
+    .quick-actions,
+    .permissions-display {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <!-- Header de profil -->
+    <div class="profile-header">
+        <div class="profile-header-content">
+            <div class="profile-avatar-large" onclick="openAvatarUpload()">
+                {{ current_user.first_name[0] if current_user.first_name else current_user.username[0] }}{{ current_user.last_name[0] if current_user.last_name else '' }}
+            </div>
+            <div class="profile-info">
+                <h1 class="profile-name">
+                    {{ current_user.first_name }} {{ current_user.last_name }} 
+                </h1>
+                <p class="profile-role">
+                    <i class="fas fa-briefcase"></i> {{ current_user.role_display }}
+                    {% if current_user.department %}
+                    · {{ current_user.department.name }}
+                    {% endif %}
+                </p>
+                <div class="profile-stats">
+                    <div class="profile-stat">
+                        <div class="profile-stat-value">{{ days_in_company }}</div>
+                        <div class="profile-stat-label">Jours dans l'entreprise</div>
+                    </div>
+                    <div class="profile-stat">
+                        <div class="profile-stat-value">{{ pending_requests }}</div>
+                        <div class="profile-stat-label">Demandes en attente</div>
+                    </div>
+                    <div class="profile-stat">
+                        <div class="profile-stat-value">{{ remaining_leaves }}</div>
+                        <div class="profile-stat-label">Jours de congés</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenu principal -->
+    <div class="profile-content">
+        <!-- Sidebar menu -->
+        <div class="profile-sidebar">
+            <div class="profile-menu">
+                <a href="#" class="profile-menu-item active" data-section="info" onclick="switchSection(event, 'info')">
+                    <div class="profile-menu-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <span>Informations</span>
+                </a>
+                <a href="#" class="profile-menu-item" data-section="security" onclick="switchSection(event, 'security')">
+                    <div class="profile-menu-icon">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <span>Sécurité</span>
+                </a>
+                <a href="#" class="profile-menu-item" data-section="requests" onclick="switchSection(event, 'requests')">
+                    <div class="profile-menu-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <span>Demandes</span>
+                </a>
+                <a href="#" class="profile-menu-item" data-section="permissions" onclick="switchSection(event, 'permissions')">
+                    <div class="profile-menu-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <span>Permissions</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Contenu principal -->
+        <div class="profile-main">
+            <!-- Section Informations -->
+            <div id="section-info" class="profile-section">
+                <h2 class="section-title">
+                    <i class="fas fa-user-circle"></i>
+                    Mes informations
+                </h2>
+                
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Nom d'utilisateur</div>
+                        <div class="info-value">
+                            <i class="fas fa-at"></i>
+                            {{ current_user.username }}
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Email</div>
+                        <div class="info-value">
+                            <i class="fas fa-envelope"></i>
+                            {{ current_user.email }}
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Téléphone</div>
+                        <div class="info-value">
+                            <i class="fas fa-phone"></i>
+                            {{ current_user.phone or 'Non renseigné' }}
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Département</div>
+                        <div class="info-value">
+                            <i class="fas fa-building"></i>
+                            {% if current_user.department %}
+                            {{ current_user.department.name }}
+                            {% else %}
+                            Non assigné
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Date d'inscription</div>
+                        <div class="info-value">
+                            <i class="fas fa-calendar"></i>
+                            {{ current_user.created_at.strftime('%d/%m/%Y') }}
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Dernière connexion</div>
+                        <div class="info-value">
+                            <i class="fas fa-clock"></i>
+                            {{ current_user.last_login.strftime('%d/%m/%Y %H:%M') if current_user.last_login else 'N/A' }}
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem;">
+                    <button class="btn-primary-gradient" onclick="openEditInfoModal()">
+                        <i class="fas fa-edit"></i>
+                        Modifier mes informations
+                    </button>
+                </div>
+            </div>
+
+            <!-- Section Sécurité -->
+            <div id="section-security" class="profile-section section-hidden">
+                <h2 class="section-title">
+                    <i class="fas fa-shield-alt"></i>
+                    Sécurité du compte
+                </h2>
+
+                <div class="request-card">
+                    <h3>
+                        <div class="request-card-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+                            <i class="fas fa-key"></i>
+                        </div>
+                        Changer le mot de passe
+                    </h3>
+                    <form id="changePasswordForm">
+                        <div class="form-group-profile">
+                            <label>Mot de passe actuel</label>
+                            <input type="password" id="currentPassword" required>
+                        </div>
+                        <div class="form-grid-2">
+                            <div class="form-group-profile">
+                                <label>Nouveau mot de passe</label>
+                                <input type="password" id="newPassword" required minlength="8">
+                                <small style="color: var(--text-secondary);">Min. 8 caractères avec majuscule, minuscule, chiffre et caractère spécial</small>
+                            </div>
+                            <div class="form-group-profile">
+                                <label>Confirmer le mot de passe</label>
+                                <input type="password" id="confirmPassword" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary-gradient">
+                            <i class="fas fa-check"></i>
+                            Mettre à jour le mot de passe
+                        </button>
+                    </form>
+                </div>
+
+                <div class="alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Pour votre sécurité, vous serez déconnecté après le changement de mot de passe.</span>
+                </div>
+            </div>
+
+            <!-- Section Demandes -->
+            <div id="section-requests" class="profile-section section-hidden">
+                <h2 class="section-title">
+                    <i class="fas fa-file-invoice"></i>
+                    Mes demandes
+                </h2>
+
+                <div class="quick-actions">
+                    <div class="quick-action-btn" onclick="openRequestModal('loan')">
+                        <div class="quick-action-icon icon-money">
+                            <i class="fas fa-hand-holding-usd"></i>
+                        </div>
+                        <strong>Prêt d'argent</strong>
+                        <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.5rem;">Avance sur salaire ou prime</p>
+                    </div>
+                    <div class="quick-action-btn" onclick="openRequestModal('leave')">
+                        <div class="quick-action-icon icon-vacation">
+                            <i class="fas fa-umbrella-beach"></i>
+                        </div>
+                        <strong>Demande de congé</strong>
+                        <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.5rem;">Congé payé ou exceptionnel</p>
+                    </div>
+                    <div class="quick-action-btn" onclick="openRequestModal('permission')">
+                        <div class="quick-action-icon icon-permission">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <strong>Permission</strong>
+                        <p style="color: var(--text-secondary); font-size: 0.875rem; margin-top: 0.5rem;">Sortie ponctuelle</p>
+                    </div>
+                </div>
+
+                <!-- Historique des demandes -->
+                <div class="request-history">
+                    <h3 style="margin-bottom: 1rem;">Historique des demandes</h3>
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="requestsHistory">
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                                    <i class="fas fa-inbox"></i>
+                                    <p>Aucune demande pour le moment</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Section Permissions -->
+            <div id="section-permissions" class="profile-section section-hidden">
+                <h2 class="section-title">
+                    <i class="fas fa-shield-check"></i>
+                    Mes permissions
+                </h2>
+
+                <div class="alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Ces permissions définissent vos droits d'accès dans le système.</span>
+                </div>
+
+                <div class="permissions-display" id="permissionsDisplay">
+                    <!-- Les permissions seront chargées ici -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Modifier Informations -->
+<div id="editInfoModal" class="modal-overlay">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h2><i class="fas fa-edit"></i> Modifier mes informations</h2>
+            <button class="modal-close-btn" onclick="closeEditInfoModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="editInfoForm">
+                <div class="form-grid-2">
+                    <div class="form-group-profile">
+                        <label>Prénom</label>
+                        <input type="text" id="editFirstName" value="{{ current_user.first_name or '' }}">
+                    </div>
+                    <div class="form-group-profile">
+                        <label>Nom</label>
+                        <input type="text" id="editLastName" value="{{ current_user.last_name or '' }}">
+                    </div>
+                </div>
+                <div class="form-group-profile">
+                    <label>Email</label>
+                    <input type="email" id="editEmail" value="{{ current_user.email }}" required>
+                </div>
+                <div class="form-group-profile">
+                    <label>Téléphone</label>
+                    <input type="tel" id="editPhone" value="{{ current_user.phone or '' }}">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditInfoModal()">
+                        Annuler
+                    </button>
+                    <button type="submit" class="btn-primary-gradient">
+                        <i class="fas fa-save"></i> Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Demande -->
+<div id="requestModal" class="modal-overlay">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h2 id="requestModalTitle"><i class="fas fa-file-alt"></i> Nouvelle demande</h2>
+            <button class="modal-close-btn" onclick="closeRequestModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="requestForm">
+                <input type="hidden" id="requestType">
+                
+                <!-- Champs pour prêt d'argent -->
+                <div id="loanFields" class="request-fields" style="display: none;">
+                    <div class="form-group-profile">
+                        <label>Type de prêt</label>
+                        <select id="loanType">
+                            <option value="salary">Avance sur salaire</option>
+                            <option value="bonus">Avance sur prime</option>
+                        </select>
+                    </div>
+                    <div class="form-group-profile">
+                        <label>Montant demandé (TND)</label>
+                        <input type="number" id="loanAmount" min="0" step="0.01">
+                    </div>
+                    <div class="form-group-profile">
+                        <label>Motif</label>
+                        <textarea id="loanReason" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <!-- Champs pour congé -->
+                <div id="leaveFields" class="request-fields" style="display: none;">
+                    <div class="form-group-profile">
+                        <label>Type de congé</label>
+                        <select id="leaveType">
+                            <option value="paid">Congé payé</option>
+                            <option value="sick">Congé maladie</option>
+                            <option value="exceptional">Congé exceptionnel</option>
+                        </select>
+                    </div>
+                    <div class="form-grid-2">
+                        <div class="form-group-profile">
+                            <label>Date de début</label>
+                            <input type="date" id="leaveStartDate">
+                        </div>
+                        <div class="form-group-profile">
+                            <label>Date de fin</label>
+                            <input type="date" id="leaveEndDate">
+                        </div>
+                    </div>
+                    <div class="form-group-profile">
+                        <label>Nombre de jours</label>
+                        <input type="number" id="leaveDays" readonly>
+                    </div>
+                    <div class="form-group-profile">
+                        <label>Raison</label>
+                        <textarea id="leaveReason" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <!-- Champs pour permission -->
+                <div id="permissionFields" class="request-fields" style="display: none;">
+                    <div class="form-group-profile">
+                        <label>Date</label>
+                        <input type="date" id="permissionDate">
+                    </div>
+                    <div class="form-grid-2">
+                        <div class="form-group-profile">
+                            <label>Heure de début</label>
+                            <input type="time" id="permissionStartTime">
+                        </div>
+                        <div class="form-group-profile">
+                            <label>Heure de fin</label>
+                            <input type="time" id="permissionEndTime">
+                        </div>
+                    </div>
+                    <div class="form-group-profile">
+                        <label>Raison</label>
+                        <textarea id="permissionReason" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions" style="margin-top: 1.5rem;">
+                    <button type="button" class="btn btn-secondary" onclick="closeRequestModal()">
+                        <i class="fas fa-times"></i> Annuler
+                    </button>
+                    <button type="submit" class="btn-primary-gradient">
+                        <i class="fas fa-paper-plane"></i> Soumettre la demande
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Variables globales
+let currentSection = 'info';
+
+// Changement de section
+function switchSection(event, section) {
+    event.preventDefault();
+    
+    // Masquer toutes les sections
+    document.querySelectorAll('.profile-section').forEach(s => {
+        s.classList.add('section-hidden');
+    });
+    
+    // Retirer la classe active de tous les items
+    document.querySelectorAll('.profile-menu-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    // Afficher la section sélectionnée
+    document.getElementById('section-' + section).classList.remove('section-hidden');
+    
+    // Activer l'item du menu
+    event.currentTarget.classList.add('active');
+    
+    currentSection = section;
+    
+    // Charger les données spécifiques
+    if (section === 'permissions') {
+        loadPermissions();
+    } else if (section === 'requests') {
+        loadRequestsHistory();
+    }
+}
+
+// Charger les permissions
+function loadPermissions() {
+    const permissionsDisplay = document.getElementById('permissionsDisplay');
+    
+    
+    const permissionLabels = {
+        read: 'Lecture',
+        write: 'Écriture',
+        create: 'Création',
+        update: 'Modification',
+        delete: 'Suppression',
+        add_tables: 'Ajouter des tables',
+        add_columns: 'Ajouter des colonnes'
+    };
+    
+    const permissionIcons = {
+        read: 'fa-eye',
+        write: 'fa-pen',
+        create: 'fa-plus',
+        update: 'fa-edit',
+        delete: 'fa-trash',
+        add_tables: 'fa-table',
+        add_columns: 'fa-columns'
+    };
+    
+    permissionsDisplay.innerHTML = Object.entries(permissions).map(([key, value]) => `
+        <div class="permission-item">
+            <div class="permission-icon-status ${value ? 'permission-granted' : 'permission-denied'}">
+                <i class="fas ${value ? 'fa-check' : 'fa-times'}"></i>
+            </div>
+            <div>
+                <div style="font-weight: 600;">${permissionLabels[key] || key}</div>
+                <div style="font-size: 0.875rem; color: var(--text-secondary);">
+                    <i class="fas ${permissionIcons[key]}"></i>
+                    ${value ? 'Autorisé' : 'Non autorisé'}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Modal informations
+function openEditInfoModal() {
+    document.getElementById('editInfoModal').classList.add('active');
+}
+
+function closeEditInfoModal() {
+    document.getElementById('editInfoModal').classList.remove('active');
+}
+
+document.getElementById('editInfoForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const data = {
+        first_name: document.getElementById('editFirstName').value,
+        last_name: document.getElementById('editLastName').value,
+        email: document.getElementById('editEmail').value,
+        phone: document.getElementById('editPhone').value
+    };
+    
+    try {
+        const response = await fetch('/users/update/{{ current_user.id }}', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Informations mises à jour avec succès!', 'success');
+            closeEditInfoModal();
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showNotification(result.error || 'Erreur lors de la mise à jour', 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'error');
+    }
+});
+
+// Changement de mot de passe
+document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (newPassword !== confirmPassword) {
+        showNotification('Les mots de passe ne correspondent pas', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/auth/change-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                current_password: currentPassword,
+                new_password: newPassword,
+                confirm_password: confirmPassword
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Mot de passe modifié avec succès! Déconnexion...', 'success');
+            setTimeout(() => {
+                window.location.href = '/auth/logout';
+            }, 2000);
+        } else {
+            showNotification(result.error || 'Erreur lors du changement', 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'error');
+    }
+});
+
+// Gestion des demandes
+let currentRequestType = null;
+
+function openRequestModal(type) {
+    currentRequestType = type;
+    document.getElementById('requestType').value = type;
+    
+    // Masquer tous les champs
+    document.querySelectorAll('.request-fields').forEach(fields => {
+        fields.style.display = 'none';
+    });
+    
+    // Afficher les bons champs et titre
+    const titles = {
+        loan: '<i class="fas fa-hand-holding-usd"></i> Demande de prêt d\'argent',
+        leave: '<i class="fas fa-umbrella-beach"></i> Demande de congé',
+        permission: '<i class="fas fa-clock"></i> Demande de permission'
+    };
+    
+    document.getElementById('requestModalTitle').innerHTML = titles[type];
+    document.getElementById(type + 'Fields').style.display = 'block';
+    document.getElementById('requestModal').classList.add('active');
+}
+
+function closeRequestModal() {
+    document.getElementById('requestModal').classList.remove('active');
+    document.getElementById('requestForm').reset();
+}
+
+// Calculer le nombre de jours de congé
+document.getElementById('leaveStartDate')?.addEventListener('change', calculateLeaveDays);
+document.getElementById('leaveEndDate')?.addEventListener('change', calculateLeaveDays);
+
+function calculateLeaveDays() {
+    const startDate = document.getElementById('leaveStartDate').value;
+    const endDate = document.getElementById('leaveEndDate').value;
+    
+    if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        const diffTime = Math.abs(end - start);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        document.getElementById('leaveDays').value = diffDays;
+    }
+}
+
+// Soumettre une demande
+document.getElementById('requestForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const type = currentRequestType;
+    let requestData = {
+        type: type,
+        status: 'pending',
+        created_at: new Date().toISOString()
+    };
+    
+    if (type === 'loan') {
+        requestData = {
+            ...requestData,
+            loan_type: document.getElementById('loanType').value,
+            amount: parseFloat(document.getElementById('loanAmount').value),
+            reason: document.getElementById('loanReason').value
+        };
+    } else if (type === 'leave') {
+        requestData = {
+            ...requestData,
+            leave_type: document.getElementById('leaveType').value,
+            start_date: document.getElementById('leaveStartDate').value,
+            end_date: document.getElementById('leaveEndDate').value,
+            days: parseInt(document.getElementById('leaveDays').value),
+            reason: document.getElementById('leaveReason').value
+        };
+    } else if (type === 'permission') {
+        requestData = {
+            ...requestData,
+            date: document.getElementById('permissionDate').value,
+            start_time: document.getElementById('permissionStartTime').value,
+            end_time: document.getElementById('permissionEndTime').value,
+            reason: document.getElementById('permissionReason').value
+        };
+    }
+    
+    try {
+        const response = await fetch('/api/employee-requests/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Demande soumise avec succès!', 'success');
+            closeRequestModal();
+            loadRequestsHistory();
+        } else {
+            showNotification(result.error || 'Erreur lors de la soumission', 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'error');
+        console.error('Error:', error);
+    }
+});
+
+// Charger l'historique des demandes
+async function loadRequestsHistory() {
+    try {
+        const response = await fetch('/api/employee-requests/my-requests');
+        const data = await response.json();
+        
+        if (data.success) {
+            displayRequestsHistory(data.requests || []);
+        }
+    } catch (error) {
+        console.error('Erreur chargement historique:', error);
+    }
+}
+
+function displayRequestsHistory(requests) {
+    const tbody = document.getElementById('requestsHistory');
+    
+    if (requests.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                    <i class="fas fa-inbox"></i>
+                    <p>Aucune demande pour le moment</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    const typeLabels = {
+        loan: 'Prêt d\'argent',
+        leave: 'Congé',
+        permission: 'Permission'
+    };
+    
+    const typeIcons = {
+        loan: 'fa-hand-holding-usd',
+        leave: 'fa-umbrella-beach',
+        permission: 'fa-clock'
+    };
+    
+    tbody.innerHTML = requests.map(request => {
+        const date = new Date(request.created_at).toLocaleDateString('fr-FR');
+        let description = '';
+        
+        if (request.type === 'loan') {
+            description = `${request.amount} TND - ${request.loan_type === 'salary' ? 'Avance salaire' : 'Avance prime'}`;
+        } else if (request.type === 'leave') {
+            description = `Du ${request.start_date} au ${request.end_date} (${request.days} jours)`;
+        } else if (request.type === 'permission') {
+            description = `Le ${request.date} de ${request.start_time} à ${request.end_time}`;
+        }
+        
+        return `
+            <tr>
+                <td>
+                    <i class="fas ${typeIcons[request.type]}"></i>
+                    ${typeLabels[request.type]}
+                </td>
+                <td>${date}</td>
+                <td>${description}</td>
+                <td>
+                    <span class="status-badge status-${request.status}">
+                        ${request.status === 'pending' ? 'En attente' : 
+                          request.status === 'approved' ? 'Approuvé' : 'Rejeté'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn-icon" onclick="viewRequest(${request.id})" title="Voir">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    ${request.status === 'pending' ? `
+                        <button class="btn-icon" onclick="cancelRequest(${request.id})" title="Annuler">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    ` : ''}
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+async function viewRequest(requestId) {
+    showNotification('Fonctionnalité en développement', 'info');
+}
+
+async function cancelRequest(requestId) {
+    if (!confirm('Êtes-vous sûr de vouloir annuler cette demande ?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/employee-requests/cancel/${requestId}`, {
+            method: 'POST'
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Demande annulée', 'success');
+            loadRequestsHistory();
+        } else {
+            showNotification(result.error || 'Erreur', 'error');
+        }
+    } catch (error) {
+        showNotification('Erreur de connexion', 'error');
+    }
+}
+
+// Upload avatar
+function openAvatarUpload() {
+    showNotification('Upload d\'avatar en cours de développement', 'info');
+}
+
+// Fermer les modals en cliquant sur le backdrop
+document.getElementById('editInfoModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeEditInfoModal();
+    }
+});
+
+document.getElementById('requestModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeRequestModal();
+    }
+});
+
+// Fermer avec ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeEditInfoModal();
+        closeRequestModal();
+    }
+});
+
+// Fonction de notification
+function showNotification(message, type) {
+    if (window.FlowERP && window.FlowERP.showNotification) {
+        window.FlowERP.showNotification(message, type);
+    } else {
+        alert(message);
+    }
+}
+
+// Charger les permissions au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    // Charger l'historique des demandes si on est sur cette section
+    if (currentSection === 'requests') {
+        loadRequestsHistory();
+    }
+});
+</script>
+{% endblock %}

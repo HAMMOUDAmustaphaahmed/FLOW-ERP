@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1
--- Généré le : ven. 07 nov. 2025 à 16:00
+-- Généré le : mar. 11 nov. 2025 à 10:15
 -- Version du serveur : 10.4.32-MariaDB
 -- Version de PHP : 8.2.12
 
@@ -59,7 +59,7 @@ CREATE TABLE `companies` (
 --
 
 INSERT INTO `companies` (`id`, `name`, `legal_name`, `tax_id`, `registration_number`, `address`, `city`, `state`, `postal_code`, `country`, `phone`, `email`, `website`, `industry`, `employee_count`, `founded_date`, `logo_url`, `currency`, `timezone`, `language`, `is_active`, `created_at`, `updated_at`, `created_by_id`) VALUES
-(1, 'Ma societe', 'Limité', '1234/A/M/000', 'B123456', '123 Avenue Habib Bourguiba', 'Tunis', 'Tunis', '1000', 'Tunisie', '+21671234567', 'contact@masociete.tn', 'https://www.masociete.tn', 'technology', NULL, '2025-11-06', NULL, 'TND', 'Africa/Tunis', 'fr', 1, '2025-11-06 13:16:51', '2025-11-06 13:16:51', 1);
+(1, '', '', NULL, NULL, '', '', NULL, NULL, 'Tunisie', '', 'ahmedmustapha.hammouda@gmail.com', NULL, '', NULL, NULL, NULL, 'TND', 'Africa/Tunis', 'fr', 1, '2025-11-10 09:34:54', '2025-11-10 09:34:54', 1);
 
 -- --------------------------------------------------------
 
@@ -75,15 +75,15 @@ CREATE TABLE `departments` (
   `company_id` int(11) NOT NULL,
   `parent_id` int(11) DEFAULT NULL,
   `manager_id` int(11) DEFAULT NULL,
+  `manager_can_add_users` tinyint(1) DEFAULT NULL,
+  `manager_can_edit_budget` tinyint(1) DEFAULT NULL,
+  `manager_can_create_tables` tinyint(1) DEFAULT NULL,
+  `manager_can_delete_items` tinyint(1) DEFAULT NULL,
   `budget` decimal(15,2) DEFAULT NULL,
   `budget_spent` decimal(15,2) DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT NULL,
   `created_at` datetime DEFAULT NULL,
   `updated_at` datetime DEFAULT NULL,
-  `manager_can_add_users` tinyint(1) DEFAULT 1,
-  `manager_can_edit_budget` tinyint(1) DEFAULT 0,
-  `manager_can_create_tables` tinyint(1) DEFAULT 1,
-  `manager_can_delete_items` tinyint(1) DEFAULT 1,
   `deleted_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -91,12 +91,11 @@ CREATE TABLE `departments` (
 -- Déchargement des données de la table `departments`
 --
 
-INSERT INTO `departments` (`id`, `name`, `code`, `description`, `company_id`, `parent_id`, `manager_id`, `budget`, `budget_spent`, `is_active`, `created_at`, `updated_at`, `manager_can_add_users`, `manager_can_edit_budget`, `manager_can_create_tables`, `manager_can_delete_items`, `deleted_at`) VALUES
-(1, 'sdvsdv', 'sdvsdv', 'sdvsdvsd', 2, NULL, NULL, 1.00, 0.00, 1, '2025-11-06 13:18:35', '2025-11-06 13:18:35', 1, 0, 1, 1, NULL),
-(2, 'fbgfb', 'gbgb', 'gbgbgbg', 2, NULL, NULL, 2.00, 0.00, 1, '2025-11-06 13:23:23', '2025-11-06 13:23:23', 1, 0, 1, 1, NULL),
-(3, 'qdsvc', 'sdc', 'sdc', 2, NULL, NULL, 2.00, 0.00, 1, '2025-11-06 13:29:02', '2025-11-06 13:29:02', 1, 0, 1, 1, NULL),
-(4, 'Informatique', 'IT', 'test', 1, NULL, NULL, 1.00, 0.00, 1, '2025-11-07 11:43:12', '2025-11-07 14:57:52', 1, 0, 1, 1, '2025-11-07 14:57:52'),
-(5, 'rge', 'erg', 'dfvdfv', 1, NULL, NULL, 95.00, 0.00, 1, '2025-11-07 14:58:06', '2025-11-07 14:58:06', 1, 0, 1, 1, NULL);
+INSERT INTO `departments` (`id`, `name`, `code`, `description`, `company_id`, `parent_id`, `manager_id`, `manager_can_add_users`, `manager_can_edit_budget`, `manager_can_create_tables`, `manager_can_delete_items`, `budget`, `budget_spent`, `is_active`, `created_at`, `updated_at`, `deleted_at`) VALUES
+(1, 'Informatique', 'IT', 'sdcsc', 1, NULL, NULL, 1, 0, 1, 1, 1.00, 0.00, 1, '2025-11-10 11:34:21', '2025-11-10 15:02:18', NULL),
+(2, 'Ressources Humaines', 'RH', 'sdcsdc', 1, NULL, NULL, 1, 0, 1, 1, 1.00, 0.00, 1, '2025-11-10 11:42:30', '2025-11-10 15:02:31', NULL),
+(3, 'Maintenance', 'MNTN', '', 1, NULL, NULL, 1, 0, 1, 1, 2.00, 0.00, 1, '2025-11-10 15:02:50', '2025-11-10 15:02:50', NULL),
+(4, 'Achats', 'ACHT', '', 1, NULL, NULL, 1, 0, 1, 1, 3.00, 0.00, 1, '2025-11-10 15:04:08', '2025-11-10 15:04:08', NULL);
 
 -- --------------------------------------------------------
 
@@ -165,10 +164,46 @@ CREATE TABLE `department_tables` (
 --
 
 INSERT INTO `department_tables` (`id`, `department_id`, `name`, `display_name`, `description`, `icon`, `is_active`, `allow_import`, `allow_export`, `view_permission`, `edit_permission`, `delete_permission`, `created_at`, `updated_at`, `created_by_id`) VALUES
-(1, 4, 'pc', 'Ordinateurs', 'test', 'desktop', 0, 1, 1, 'department', 'department', 'manager_only', '2025-11-07 11:53:38', '2025-11-07 13:41:00', 1),
-(2, 4, 'dscsd', 'cvsdcsdcsd', 'csdcsdcsdc', 'table', 1, 1, 1, 'department', 'department', 'manager_only', '2025-11-07 14:49:03', '2025-11-07 14:49:03', 1),
-(3, 5, 'vdfvdf', 'vdfvdfvdfv', 'dfvdf', 'table', 1, 1, 1, 'department', 'department', 'manager_only', '2025-11-07 14:58:27', '2025-11-07 14:58:27', 1),
-(4, 5, 'dfvdfv', 'dfvdf', 'vdfvdfvdfv', 'table', 1, 1, 1, 'department', 'department', 'manager_only', '2025-11-07 14:58:48', '2025-11-07 14:58:48', 1);
+(1, 2, 'employees', 'Employees', '', 'clipboard-list', 1, 1, 1, 'department', 'department', 'manager_only', '2025-11-10 13:12:24', '2025-11-10 13:12:24', 1),
+(2, 3, 'machines', 'Machines', '', 'table', 1, 1, 1, 'department', 'department', 'manager_only', '2025-11-10 15:03:22', '2025-11-10 15:03:22', 1);
+
+-- --------------------------------------------------------
+
+--
+-- Structure de la table `employee_requests`
+--
+
+CREATE TABLE `employee_requests` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `type` varchar(20) NOT NULL,
+  `status` varchar(20) DEFAULT NULL,
+  `loan_type` varchar(20) DEFAULT NULL,
+  `amount` decimal(10,2) DEFAULT NULL,
+  `leave_type` varchar(20) DEFAULT NULL,
+  `start_date` date DEFAULT NULL,
+  `end_date` date DEFAULT NULL,
+  `days` int(11) DEFAULT NULL,
+  `permission_date` date DEFAULT NULL,
+  `start_time` varchar(5) DEFAULT NULL,
+  `end_time` varchar(5) DEFAULT NULL,
+  `reason` text DEFAULT NULL,
+  `approved_by_id` int(11) DEFAULT NULL,
+  `approved_at` datetime DEFAULT NULL,
+  `admin_comment` text DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Déchargement des données de la table `employee_requests`
+--
+
+INSERT INTO `employee_requests` (`id`, `user_id`, `type`, `status`, `loan_type`, `amount`, `leave_type`, `start_date`, `end_date`, `days`, `permission_date`, `start_time`, `end_time`, `reason`, `approved_by_id`, `approved_at`, `admin_comment`, `created_at`, `updated_at`) VALUES
+(1, 1, 'loan', 'rejected', 'salary', 1000.00, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'qsdcsqdc', 1, '2025-11-11 08:11:27', 'qscqscqsc', '2025-11-11 08:11:11', '2025-11-11 08:11:27'),
+(2, 1, 'leave', 'rejected', NULL, NULL, 'sick', '2025-11-11', '2025-11-11', 1, NULL, NULL, NULL, 'qscqscqsc', 1, '2025-11-11 08:12:05', 'qsc', '2025-11-11 08:11:53', '2025-11-11 08:12:05'),
+(3, 1, 'permission', 'rejected', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-11', '10:00', '11:00', 'qscqsc', 1, '2025-11-11 08:12:36', 'qscqsc', '2025-11-11 08:12:29', '2025-11-11 08:12:36'),
+(4, 3, 'loan', 'pending', 'salary', 100.00, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'svdsdv', NULL, NULL, NULL, '2025-11-11 08:14:27', '2025-11-11 08:14:27');
 
 -- --------------------------------------------------------
 
@@ -191,10 +226,18 @@ CREATE TABLE `login_attempts` (
 --
 
 INSERT INTO `login_attempts` (`id`, `username`, `ip_address`, `user_agent`, `success`, `failure_reason`, `timestamp`) VALUES
-(1, 'HammoudaAhmed', '127.0.0.1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 1, NULL, '2025-11-05 12:40:56'),
-(2, 'HammoudaAhmed', '192.168.213.43', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 1, NULL, '2025-11-05 14:40:45'),
-(3, 'HammoudaAhmed', '192.168.213.43', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 1, NULL, '2025-11-06 13:40:11'),
-(4, 'HammoudaAhmed', '192.168.213.43', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 1, NULL, '2025-11-06 13:54:17');
+(1, 'HammoudaAhmed', '192.168.213.43', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 0, 'user_not_found', '2025-11-10 09:16:42'),
+(2, 'HammoudaAhmed', '192.168.213.43', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 0, 'user_not_found', '2025-11-10 09:16:44'),
+(3, 'HammoudaAhmed', '192.168.213.43', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 0, 'user_not_found', '2025-11-10 09:31:04'),
+(4, 'HammoudaAhmed', '192.168.213.43', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 1, NULL, '2025-11-10 09:34:54'),
+(5, 'HammoudaAhmed', '192.168.213.43', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 1, NULL, '2025-11-10 09:35:13'),
+(6, 'test123', '192.168.213.43', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 1, NULL, '2025-11-10 11:35:46'),
+(7, 'HammoudaAhmed', '192.168.213.43', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 1, NULL, '2025-11-10 11:36:18'),
+(8, 'HammoudaAhmed', '192.168.213.43', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 1, NULL, '2025-11-10 13:08:26'),
+(9, 'testrh', '192.168.213.43', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 1, NULL, '2025-11-10 13:14:50'),
+(10, 'HammoudaAhmed', '192.168.213.43', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 1, NULL, '2025-11-10 13:19:45'),
+(11, 'Testrh', '192.168.213.43', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 1, NULL, '2025-11-11 08:13:55'),
+(12, 'HammoudaAhmed', '192.168.213.43', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0', 1, NULL, '2025-11-11 08:14:40');
 
 -- --------------------------------------------------------
 
@@ -247,12 +290,13 @@ CREATE TABLE `table_columns` (
 --
 
 INSERT INTO `table_columns` (`id`, `table_id`, `name`, `display_name`, `data_type`, `type_config`, `is_required`, `is_unique`, `default_value`, `validation_rules`, `order`, `width`, `is_visible`, `is_sortable`, `is_filterable`, `display_format`, `prefix`, `suffix`, `created_at`) VALUES
-(1, 1, 'marque', 'Marque', 'text', NULL, 0, 0, NULL, NULL, 0, NULL, 1, 1, 1, NULL, NULL, NULL, '2025-11-07 11:53:38'),
-(2, 2, 'sdc', 'sdcs', 'text', NULL, 0, 0, NULL, NULL, 0, NULL, 1, 1, 1, NULL, NULL, NULL, '2025-11-07 14:49:03'),
-(3, 3, 'dfv', 'dfvdf', 'text', NULL, 1, 0, NULL, NULL, 0, NULL, 1, 1, 1, NULL, NULL, NULL, '2025-11-07 14:58:27'),
-(4, 3, 'dfvdf', 'vdfvdfv', 'text', NULL, 0, 0, NULL, NULL, 1, NULL, 1, 1, 1, NULL, NULL, NULL, '2025-11-07 14:58:27'),
-(5, 3, 'dfvdf', 'vdfv', 'text', NULL, 0, 0, NULL, NULL, 2, NULL, 1, 1, 1, NULL, NULL, NULL, '2025-11-07 14:58:27'),
-(6, 4, 'dfv', 'dfvdf', 'text', NULL, 0, 0, NULL, NULL, 0, NULL, 1, 1, 1, NULL, NULL, NULL, '2025-11-07 14:58:48');
+(1, 1, 'sdvs', 'sdv', 'text', NULL, 0, 0, NULL, NULL, 0, NULL, 1, 1, 1, NULL, NULL, NULL, '2025-11-10 13:12:24'),
+(2, 1, 'sdvs', 'dvsdv', 'text', NULL, 0, 0, NULL, NULL, 1, NULL, 1, 1, 1, NULL, NULL, NULL, '2025-11-10 13:12:24'),
+(3, 1, 'sdv', 'sdv', 'text', NULL, 0, 0, NULL, NULL, 2, NULL, 1, 1, 1, NULL, NULL, NULL, '2025-11-10 13:12:24'),
+(4, 1, 'hhnhnh', 'hnghg', 'text', NULL, 0, 0, NULL, NULL, 3, NULL, 1, 1, 1, NULL, NULL, NULL, '2025-11-10 13:12:24'),
+(5, 1, 'fgnf', 'fgbfg', 'text', NULL, 0, 0, NULL, NULL, 4, NULL, 1, 1, 1, NULL, NULL, NULL, '2025-11-10 13:12:24'),
+(6, 1, 'fgbfgb', 'fgbfg', 'text', NULL, 0, 0, NULL, NULL, 5, NULL, 1, 1, 1, NULL, NULL, NULL, '2025-11-10 13:12:24'),
+(7, 2, 'nom', 'Nom', 'text', NULL, 0, 0, NULL, NULL, 0, NULL, 1, 1, 1, NULL, NULL, NULL, '2025-11-10 15:03:22');
 
 -- --------------------------------------------------------
 
@@ -277,8 +321,8 @@ CREATE TABLE `table_rows` (
 --
 
 INSERT INTO `table_rows` (`id`, `table_id`, `data`, `row_order`, `is_active`, `created_at`, `updated_at`, `created_by_id`, `updated_by_id`) VALUES
-(2, 1, '{\"marque\": \"test\"}', 0, 1, '2025-11-07 13:40:44', '2025-11-07 13:40:44', 1, NULL),
-(3, 4, '{\"dfv\": \"vdfvdf\"}', 0, 1, '2025-11-07 14:58:56', '2025-11-07 14:58:56', 1, NULL);
+(1, 1, '{\"sdvs\": \"dfvdfvfffff\", \"sdv\": \"sdcsd\", \"hhnhnh\": \"csdc\", \"fgnf\": \"sdcs\", \"fgbfgb\": \"125\"}', 0, 1, '2025-11-10 13:12:54', '2025-11-10 13:15:19', 1, 3),
+(2, 1, '{\"sdvs\": \"svdsfvdfvd\", \"sdv\": \"vdfvdfv\", \"hhnhnh\": \"dfvdf\", \"fgnf\": \"vdfvdfv\", \"fgbfgb\": \"dfvdfv\"}', 0, 1, '2025-11-10 13:15:08', '2025-11-10 13:15:13', 3, 3);
 
 -- --------------------------------------------------------
 
@@ -315,6 +359,13 @@ CREATE TABLE `users` (
   `is_admin` tinyint(1) DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT NULL,
   `role` varchar(50) DEFAULT NULL,
+  `can_read` tinyint(1) NOT NULL DEFAULT 1,
+  `can_write` tinyint(1) NOT NULL DEFAULT 0,
+  `can_create` tinyint(1) NOT NULL DEFAULT 0,
+  `can_update` tinyint(1) NOT NULL DEFAULT 0,
+  `can_delete` tinyint(1) NOT NULL DEFAULT 0,
+  `can_add_tables` tinyint(1) NOT NULL DEFAULT 0,
+  `can_add_columns` tinyint(1) NOT NULL DEFAULT 0,
   `failed_login_attempts` int(11) DEFAULT NULL,
   `account_locked_until` datetime DEFAULT NULL,
   `password_changed_at` datetime DEFAULT NULL,
@@ -332,8 +383,10 @@ CREATE TABLE `users` (
 -- Déchargement des données de la table `users`
 --
 
-INSERT INTO `users` (`id`, `username`, `email`, `password_hash`, `first_name`, `last_name`, `phone`, `is_admin`, `is_active`, `role`, `failed_login_attempts`, `account_locked_until`, `password_changed_at`, `two_factor_enabled`, `two_factor_secret`, `created_at`, `updated_at`, `last_login`, `last_ip`, `company_id`, `department_id`) VALUES
-(1, 'HammoudaAhmed', 'ahmedmustapha.hammouda@gmail.com', 'scrypt:32768:8:1$zjf9oGnhdDzuMH7r$6ed7150d7bc973f95513711c97e431f016964bc4c0fa20afed9a255c3b28425f2b9766fdaa2baa8d05ac30fcb4d1347cab0cd1859b91b168ec3f788e6d2df18b', 'ahmed', 'hammouda', NULL, 1, 1, 'admin', 0, NULL, NULL, NULL, NULL, '2025-11-05 12:40:18', '2025-11-06 13:54:17', '2025-11-06 13:54:17', '192.168.213.43', 1, NULL);
+INSERT INTO `users` (`id`, `username`, `email`, `password_hash`, `first_name`, `last_name`, `phone`, `is_admin`, `is_active`, `role`, `can_read`, `can_write`, `can_create`, `can_update`, `can_delete`, `can_add_tables`, `can_add_columns`, `failed_login_attempts`, `account_locked_until`, `password_changed_at`, `two_factor_enabled`, `two_factor_secret`, `created_at`, `updated_at`, `last_login`, `last_ip`, `company_id`, `department_id`) VALUES
+(1, 'HammoudaAhmed', 'ahmedmustapha.hammouda@gmail.com', 'pbkdf2:sha256:600000$eK6G8sUmKTYJokNU$9bd2682b9968c9b591b20999394ab09a4e0da64ab4a01efc7cb0707a00683f11', 'Ahmed', 'Hammouda', '12345678', 1, 1, 'admin', 1, 1, 1, 1, 1, 1, 1, 0, NULL, '2025-11-10 09:34:54', 0, NULL, '2025-11-10 09:34:54', '2025-11-11 08:14:40', '2025-11-11 08:14:40', '192.168.213.43', 1, NULL),
+(2, 'test123', 'test.123@gmail.com', 'pbkdf2:sha256:600000$B8V9A1M9RAV1oWXX$cd9442aba8b2acae2556055f725f053600183014d8b70796a26ba08d344cd974', 'test', 'test', '12345678', 0, 1, 'technician', 1, 0, 0, 0, 0, 0, 0, 0, NULL, '2025-11-10 11:35:15', 0, NULL, '2025-11-10 11:35:15', '2025-11-10 11:35:46', '2025-11-10 11:35:46', '192.168.213.43', 1, 1),
+(3, 'testrh', 'testrh@gmail.com', 'pbkdf2:sha256:600000$JIiBHnWhwOylFGGd$59ab5c395dfe2c0800a14da7a21cc710ad13d945cb831a3f27e06ce6e1c3a528', 'test', 'rh', '12345678', 0, 1, 'employee', 1, 1, 0, 0, 0, 0, 0, 0, NULL, '2025-11-10 13:14:33', 0, NULL, '2025-11-10 13:14:33', '2025-11-11 08:13:55', '2025-11-11 08:13:55', '192.168.213.43', 1, 2);
 
 --
 -- Index pour les tables déchargées
@@ -354,8 +407,8 @@ ALTER TABLE `companies`
 ALTER TABLE `departments`
   ADD PRIMARY KEY (`id`),
   ADD KEY `manager_id` (`manager_id`),
-  ADD KEY `company_id` (`company_id`),
-  ADD KEY `parent_id` (`parent_id`);
+  ADD KEY `parent_id` (`parent_id`),
+  ADD KEY `company_id` (`company_id`);
 
 --
 -- Index pour la table `department_fields`
@@ -370,8 +423,8 @@ ALTER TABLE `department_fields`
 ALTER TABLE `department_items`
   ADD PRIMARY KEY (`id`),
   ADD KEY `created_by_id` (`created_by_id`),
-  ADD KEY `idx_dept_item_type` (`department_id`,`item_type`),
-  ADD KEY `fk_dept_items_updated_by` (`updated_by_id`);
+  ADD KEY `updated_by_id` (`updated_by_id`),
+  ADD KEY `idx_dept_item_type` (`department_id`,`item_type`);
 
 --
 -- Index pour la table `department_tables`
@@ -382,12 +435,22 @@ ALTER TABLE `department_tables`
   ADD KEY `created_by_id` (`created_by_id`);
 
 --
+-- Index pour la table `employee_requests`
+--
+ALTER TABLE `employee_requests`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `approved_by_id` (`approved_by_id`),
+  ADD KEY `idx_user_status` (`user_id`,`status`),
+  ADD KEY `idx_type_status` (`type`,`status`),
+  ADD KEY `idx_created_at` (`created_at`);
+
+--
 -- Index pour la table `login_attempts`
 --
 ALTER TABLE `login_attempts`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `ix_login_attempts_timestamp` (`timestamp`),
-  ADD KEY `ix_login_attempts_username` (`username`);
+  ADD KEY `ix_login_attempts_username` (`username`),
+  ADD KEY `ix_login_attempts_timestamp` (`timestamp`);
 
 --
 -- Index pour la table `sessions`
@@ -438,13 +501,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT pour la table `companies`
 --
 ALTER TABLE `companies`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT pour la table `departments`
 --
 ALTER TABLE `departments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT pour la table `department_fields`
@@ -462,13 +525,19 @@ ALTER TABLE `department_items`
 -- AUTO_INCREMENT pour la table `department_tables`
 --
 ALTER TABLE `department_tables`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT pour la table `employee_requests`
+--
+ALTER TABLE `employee_requests`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT pour la table `login_attempts`
 --
 ALTER TABLE `login_attempts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT pour la table `sessions`
@@ -480,13 +549,13 @@ ALTER TABLE `sessions`
 -- AUTO_INCREMENT pour la table `table_columns`
 --
 ALTER TABLE `table_columns`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT pour la table `table_rows`
 --
 ALTER TABLE `table_rows`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT pour la table `table_templates`
@@ -498,7 +567,7 @@ ALTER TABLE `table_templates`
 -- AUTO_INCREMENT pour la table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- Contraintes pour les tables déchargées
@@ -515,8 +584,8 @@ ALTER TABLE `companies`
 --
 ALTER TABLE `departments`
   ADD CONSTRAINT `departments_ibfk_1` FOREIGN KEY (`manager_id`) REFERENCES `users` (`id`),
-  ADD CONSTRAINT `departments_ibfk_2` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`),
-  ADD CONSTRAINT `departments_ibfk_3` FOREIGN KEY (`parent_id`) REFERENCES `departments` (`id`);
+  ADD CONSTRAINT `departments_ibfk_2` FOREIGN KEY (`parent_id`) REFERENCES `departments` (`id`),
+  ADD CONSTRAINT `departments_ibfk_3` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`);
 
 --
 -- Contraintes pour la table `department_fields`
@@ -530,7 +599,7 @@ ALTER TABLE `department_fields`
 ALTER TABLE `department_items`
   ADD CONSTRAINT `department_items_ibfk_1` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`),
   ADD CONSTRAINT `department_items_ibfk_2` FOREIGN KEY (`created_by_id`) REFERENCES `users` (`id`),
-  ADD CONSTRAINT `fk_dept_items_updated_by` FOREIGN KEY (`updated_by_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `department_items_ibfk_3` FOREIGN KEY (`updated_by_id`) REFERENCES `users` (`id`);
 
 --
 -- Contraintes pour la table `department_tables`
@@ -538,6 +607,13 @@ ALTER TABLE `department_items`
 ALTER TABLE `department_tables`
   ADD CONSTRAINT `department_tables_ibfk_1` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`),
   ADD CONSTRAINT `department_tables_ibfk_2` FOREIGN KEY (`created_by_id`) REFERENCES `users` (`id`);
+
+--
+-- Contraintes pour la table `employee_requests`
+--
+ALTER TABLE `employee_requests`
+  ADD CONSTRAINT `employee_requests_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `employee_requests_ibfk_2` FOREIGN KEY (`approved_by_id`) REFERENCES `users` (`id`);
 
 --
 -- Contraintes pour la table `sessions`
