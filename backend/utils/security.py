@@ -2,10 +2,12 @@ import re
 import secrets
 import hashlib
 from functools import wraps
-from flask import request, jsonify, session, current_app
+from flask import request, jsonify, session, current_app,redirect, url_for
 from datetime import datetime, timedelta
 import bleach
 from typing import Optional
+from functools import wraps
+from models.user import User
 
 
 class SecurityValidator:
@@ -174,14 +176,67 @@ rate_limiter = RateLimiter()
 
 
 def require_login(f):
-    """Décorateur pour exiger une authentification"""
+    """Décorateur : nécessite d'être connecté"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            return jsonify({'error': 'Authentication required'}), 401
+            return jsonify({'success': False, 'error': 'Non authentifié'}), 401
         return f(*args, **kwargs)
     return decorated_function
 
+def require_payroll_access(f):
+    """Décorateur : nécessite l'accès à la gestion de la paie"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Non authentifié'}), 401
+        
+        user = User.query.get(session['user_id'])
+        if not user:
+            return jsonify({'success': False, 'error': 'Utilisateur non trouvé'}), 404
+        
+        # Vérifier si l'utilisateur peut accéder à la paie
+        if not user.can_access_payroll:
+            return jsonify({
+                'success': False, 
+                'error': 'Accès refusé. Seuls les administrateurs et chefs de département peuvent accéder à la gestion de la paie.'
+            }), 403
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+def require_admin_or_manager(f):
+    """Décorateur : nécessite d'être admin ou chef de département"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'success': False, 'error': 'Non authentifié'}), 401
+        
+        user = User.query.get(session['user_id'])
+        if not user or (not user.is_admin and not user.is_department_manager):
+            return jsonify({'success': False, 'error': 'Accès non autorisé'}), 403
+        
+        return f(*args, **kwargs)
+    return decorated_function
+
+def require_role(*allowed_roles):
+    """Décorateur générique : nécessite un ou plusieurs rôles spécifiques"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session:
+                return jsonify({'success': False, 'error': 'Non authentifié'}), 401
+            
+            user = User.query.get(session['user_id'])
+            if not user or user.role not in allowed_roles:
+                return jsonify({
+                    'success': False, 
+                    'error': f'Accès refusé. Rôle requis: {", ".join(allowed_roles)}'
+                }), 403
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 def require_admin(f):
     """Décorateur pour exiger des droits administrateur"""

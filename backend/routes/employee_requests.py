@@ -1,6 +1,6 @@
 # routes/employee_requests.py
-"""Routes pour la gestion des demandes des employés (prêts, congés, permissions)"""
-from flask import Blueprint, request, jsonify, session, render_template, redirect, url_for
+"""Routes pour la gestion des demandes avec hiérarchie et blockchain"""
+from flask import Blueprint, request, jsonify, session, render_template, redirect, url_for, current_app
 from database import db
 from models.user import User
 from models.employee_request import EmployeeRequest
@@ -10,46 +10,70 @@ from datetime import datetime, timedelta
 employee_requests_bp = Blueprint('employee_requests', __name__, url_prefix='/api/employee-requests')
 
 
-@employee_requests_bp.route('/profile-page')
-@require_login
-def profile_page():
-    """Page de profil de l'utilisateur"""
-    user = User.query.get(session['user_id'])
+def get_blockchain():
+    """Récupère l'instance blockchain"""
+    return current_app.extensions.get('blockchain')
+
+
+def add_to_blockchain(request_obj, action_type, user_id):
+    """Ajoute une transaction à la blockchain"""
+    blockchain = get_blockchain()
+    if not blockchain:
+        return False
     
-    if not user or not user.is_active:
-        return redirect(url_for('auth.login_page'))
+    transaction = {
+        'type': 'employee_request',
+        'action': action_type,
+        'entity_type': 'employee_request',
+        'entity_id': request_obj.id,
+        'user_id': user_id,
+        'request_type': request_obj.type,
+        'requester_id': request_obj.user_id,
+        'requester_name': request_obj.user.get_full_name(),
+        'status': request_obj.status,
+        'details': {
+            'type': request_obj.type,
+            'reason': request_obj.reason[:100] if request_obj.reason else None,
+            'expected_approver': request_obj.expected_approver_id,
+            'actual_approver': request_obj.approved_by_id if request_obj.approved_by_id else None
+        },
+        'timestamp': datetime.utcnow().isoformat()
+    }
     
-    # Calculer les statistiques
-    days_in_company = (datetime.utcnow() - user.created_at).days
+    # Ajouter des détails spécifiques selon le type
+    if request_obj.type == 'leave':
+        transaction['details'].update({
+            'leave_type': request_obj.leave_type,
+            'start_date': request_obj.start_date.isoformat() if request_obj.start_date else None,
+            'end_date': request_obj.end_date.isoformat() if request_obj.end_date else None,
+            'days': request_obj.days
+        })
+    elif request_obj.type == 'loan':
+        transaction['details'].update({
+            'amount': float(request_obj.amount) if request_obj.amount else None
+        })
     
-    # Compter les demandes en attente
-    pending_requests = EmployeeRequest.query.filter_by(
-        user_id=user.id,
-        status='pending'
-    ).count()
+    blockchain.add_transaction(transaction)
     
-    # Jours de congés restants (exemple: 30 jours par an)
-    total_leave_days = 30
-    used_leave_days = db.session.query(db.func.sum(EmployeeRequest.days)).filter(
-        EmployeeRequest.user_id == user.id,
-        EmployeeRequest.type == 'leave',
-        EmployeeRequest.status == 'approved',
-        EmployeeRequest.created_at >= datetime(datetime.utcnow().year, 1, 1)
-    ).scalar() or 0
+    # Miner immédiatement pour les actions importantes
+    if action_type in ['approved', 'rejected']:
+        blockchain.mine_pending_transactions(f"system_payroll")
+        
+        # Mettre à jour l'enregistrement avec le hash blockchain
+        latest_block = blockchain.get_latest_block()
+        if latest_block:
+            request_obj.blockchain_hash = latest_block['hash']
+            request_obj.blockchain_block_index = latest_block['index']
+            request_obj.is_in_blockchain = True
+            db.session.commit()
     
-    remaining_leaves = total_leave_days - used_leave_days
-    
-    return render_template('profile.html', 
-                          user=user,
-                          days_in_company=days_in_company,
-                          pending_requests=pending_requests,
-                          remaining_leaves=remaining_leaves)
+    return True
 
 
 @employee_requests_bp.route('/create', methods=['POST'])
 @require_login
 def create_request():
-    """Créer une nouvelle demande"""
+    """Créer une nouvelle demande avec approbateur automatique"""
     data = request.get_json()
     user_id = session['user_id']
     
@@ -78,7 +102,7 @@ def create_request():
             employee_request.days = data.get('days')
             employee_request.reason = data.get('reason')
             
-            # Vérifier si assez de jours disponibles
+            # Vérifier jours disponibles
             user = User.query.get(user_id)
             total_leave_days = 30
             used_leave_days = db.session.query(db.func.sum(EmployeeRequest.days)).filter(
@@ -100,22 +124,35 @@ def create_request():
             employee_request.end_time = data.get('end_time')
             employee_request.reason = data.get('reason')
         
+        # 🆕 Définir l'approbateur attendu selon la hiérarchie
+        employee_request.set_expected_approver()
+        
         db.session.add(employee_request)
+        db.session.flush()
+        
+        # 🆕 Ajouter à la blockchain
+        add_to_blockchain(employee_request, 'created', user_id)
+        
         db.session.commit()
         
-        # Logger dans la blockchain
+        # Logger dans l'audit
         AuditLogger.log_action(
             user_id,
             'request_created',
             'employee_request',
             employee_request.id,
-            {'type': request_type, 'status': 'pending'}
+            {
+                'type': request_type, 
+                'status': 'pending',
+                'expected_approver': employee_request.expected_approver_id
+            }
         )
         
         return jsonify({
             'success': True,
             'message': 'Demande créée avec succès',
-            'request': employee_request.to_dict()
+            'request': employee_request.to_dict(),
+            'hierarchy_info': employee_request.get_approval_hierarchy_info()
         }), 201
         
     except Exception as e:
@@ -129,7 +166,6 @@ def get_my_requests():
     """Récupérer les demandes de l'utilisateur connecté"""
     user_id = session['user_id']
     
-    # Filtres
     status = request.args.get('status')
     request_type = request.args.get('type')
     
@@ -148,27 +184,66 @@ def get_my_requests():
     }), 200
 
 
-@employee_requests_bp.route('/all', methods=['GET'])
-@require_admin
-def get_all_requests():
-    """Récupérer toutes les demandes (admin/manager)"""
-    user = User.query.get(session['user_id'])
+@employee_requests_bp.route('/pending-for-me', methods=['GET'])
+@require_login
+def get_pending_for_me():
+    """
+    🆕 Récupérer les demandes en attente qui doivent être traitées par l'utilisateur
+    selon la hiérarchie d'approbation
+    """
+    user_id = session['user_id']
+    user = User.query.get(user_id)
     
     # Filtres
+    request_type = request.args.get('type')
+    
+    # Query de base : demandes où je suis l'approbateur attendu
+    query = EmployeeRequest.query.filter(
+        EmployeeRequest.expected_approver_id == user_id,
+        EmployeeRequest.status == 'pending'
+    )
+    
+    # OU si je suis admin, je vois toutes les demandes pending
+    if user.is_admin:
+        query = EmployeeRequest.query.filter_by(status='pending')
+    
+    if request_type:
+        query = query.filter_by(type=request_type)
+    
+    requests = query.order_by(EmployeeRequest.created_at.desc()).all()
+    
+    return jsonify({
+        'success': True,
+        'requests': [req.to_dict() for req in requests],
+        'count': len(requests)
+    }), 200
+
+
+@employee_requests_bp.route('/all', methods=['GET'])
+@require_login
+def get_all_requests():
+    """Récupérer toutes les demandes selon les permissions"""
+    user = User.query.get(session['user_id'])
+    
     status = request.args.get('status')
     request_type = request.args.get('type')
     department_id = request.args.get('department_id')
     
-    # Query de base
-    if user.is_admin:
+    # Query de base selon le rôle
+    if user.is_admin or user.role == 'directeur_rh':
+        # Admin et DRH voient tout
         query = EmployeeRequest.query
     elif user.role == 'department_manager' and user.department_id:
-        # Manager voit uniquement les demandes de son département
+        # Chef voit son département
         query = EmployeeRequest.query.join(User).filter(
             User.department_id == user.department_id
         )
+    elif user.role == 'assistant_administratif':
+        # Assistant admin voit tout (lecture seule)
+        query = EmployeeRequest.query
     else:
-        return jsonify({'error': 'Accès non autorisé'}), 403
+        # Autres : uniquement leurs propres demandes
+        query = EmployeeRequest.query.filter_by(user_id=user.id)
     
     # Appliquer les filtres
     if status:
@@ -187,18 +262,18 @@ def get_all_requests():
 
 
 @employee_requests_bp.route('/approve/<int:request_id>', methods=['POST'])
-@require_admin
+@require_login
 def approve_request(request_id):
-    """Approuver une demande"""
+    """Approuver une demande avec vérification hiérarchique"""
     user = User.query.get(session['user_id'])
     employee_request = EmployeeRequest.query.get_or_404(request_id)
     
-    # Vérifier les permissions
-    if not user.is_admin:
-        if user.role != 'department_manager':
-            return jsonify({'error': 'Accès non autorisé'}), 403
-        if employee_request.user.department_id != user.department_id:
-            return jsonify({'error': 'Accès non autorisé'}), 403
+    # 🆕 Vérifier les permissions selon la hiérarchie
+    if not employee_request.can_be_approved_by(user):
+        return jsonify({
+            'error': 'Vous n\'êtes pas autorisé à approuver cette demande selon la hiérarchie',
+            'expected_approver': employee_request.expected_approver.get_full_name() if employee_request.expected_approver else 'Admin'
+        }), 403
     
     data = request.get_json()
     
@@ -208,6 +283,11 @@ def approve_request(request_id):
         employee_request.approved_at = datetime.utcnow()
         employee_request.admin_comment = data.get('comment')
         
+        db.session.flush()
+        
+        # 🆕 Ajouter à la blockchain
+        add_to_blockchain(employee_request, 'approved', user.id)
+        
         db.session.commit()
         
         # Logger
@@ -216,7 +296,11 @@ def approve_request(request_id):
             'request_approved',
             'employee_request',
             request_id,
-            {'type': employee_request.type, 'user_id': employee_request.user_id}
+            {
+                'type': employee_request.type, 
+                'user_id': employee_request.user_id,
+                'approver_role': user.role
+            }
         )
         
         return jsonify({
@@ -231,18 +315,17 @@ def approve_request(request_id):
 
 
 @employee_requests_bp.route('/reject/<int:request_id>', methods=['POST'])
-@require_admin
+@require_login
 def reject_request(request_id):
-    """Rejeter une demande"""
+    """Rejeter une demande avec vérification hiérarchique"""
     user = User.query.get(session['user_id'])
     employee_request = EmployeeRequest.query.get_or_404(request_id)
     
-    # Vérifier les permissions
-    if not user.is_admin:
-        if user.role != 'department_manager':
-            return jsonify({'error': 'Accès non autorisé'}), 403
-        if employee_request.user.department_id != user.department_id:
-            return jsonify({'error': 'Accès non autorisé'}), 403
+    # 🆕 Vérifier les permissions selon la hiérarchie
+    if not employee_request.can_be_approved_by(user):
+        return jsonify({
+            'error': 'Vous n\'êtes pas autorisé à rejeter cette demande selon la hiérarchie'
+        }), 403
     
     data = request.get_json()
     
@@ -252,6 +335,11 @@ def reject_request(request_id):
         employee_request.approved_at = datetime.utcnow()
         employee_request.admin_comment = data.get('comment', 'Demande rejetée')
         
+        db.session.flush()
+        
+        # 🆕 Ajouter à la blockchain
+        add_to_blockchain(employee_request, 'rejected', user.id)
+        
         db.session.commit()
         
         # Logger
@@ -260,7 +348,11 @@ def reject_request(request_id):
             'request_rejected',
             'employee_request',
             request_id,
-            {'type': employee_request.type, 'user_id': employee_request.user_id}
+            {
+                'type': employee_request.type, 
+                'user_id': employee_request.user_id,
+                'approver_role': user.role
+            }
         )
         
         return jsonify({
@@ -281,19 +373,21 @@ def cancel_request(request_id):
     user_id = session['user_id']
     employee_request = EmployeeRequest.query.get_or_404(request_id)
     
-    # Vérifier que c'est bien la demande de l'utilisateur
     if employee_request.user_id != user_id:
         return jsonify({'error': 'Accès non autorisé'}), 403
     
-    # On ne peut annuler que les demandes en attente
     if employee_request.status != 'pending':
         return jsonify({'error': 'Seules les demandes en attente peuvent être annulées'}), 400
     
     try:
         employee_request.status = 'cancelled'
+        db.session.flush()
+        
+        # Ajouter à la blockchain
+        add_to_blockchain(employee_request, 'cancelled', user_id)
+        
         db.session.commit()
         
-        # Logger
         AuditLogger.log_action(
             user_id,
             'request_cancelled',
@@ -311,6 +405,69 @@ def cancel_request(request_id):
         db.session.rollback()
         return jsonify({'error': f'Erreur: {str(e)}'}), 500
 
+@employee_requests_bp.route('/admin/dashboard', methods=['GET'])
+@require_login
+def get_admin_dashboard_stats():
+    """
+    📊 Statistiques du dashboard admin pour les demandes
+    """
+    user = User.query.get(session['user_id'])
+    
+    # Vérifier les permissions
+    if not (user.is_admin or user.role == 'department_manager'):
+        return jsonify({
+            'success': False,
+            'error': 'Accès refusé'
+        }), 403
+    
+    try:
+        # Construire la query de base selon les permissions
+        if user.is_admin or user.role == 'directeur_rh':
+            # Admin et DRH voient tout
+            base_query = EmployeeRequest.query
+        elif user.role == 'department_manager' and user.department_id:
+            # Chef voit son département
+            base_query = EmployeeRequest.query.join(User).filter(
+                User.department_id == user.department_id
+            )
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Accès refusé'
+            }), 403
+        
+        # Calculer les statistiques
+        stats = {
+            'pending': base_query.filter_by(status='pending').count(),
+            'approved': base_query.filter_by(status='approved').count(),
+            'rejected': base_query.filter_by(status='rejected').count(),
+            'cancelled': base_query.filter_by(status='cancelled').count()
+        }
+        
+        # Statistiques par type
+        stats['by_type'] = {
+            'loan': base_query.filter_by(type='loan').count(),
+            'leave': base_query.filter_by(type='leave').count(),
+            'permission': base_query.filter_by(type='permission').count()
+        }
+        
+        # Demandes récentes (7 derniers jours)
+        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        stats['recent'] = base_query.filter(
+            EmployeeRequest.created_at >= seven_days_ago
+        ).count()
+        
+        return jsonify({
+            'success': True,
+            'stats': stats
+        }), 200
+        
+    except Exception as e:
+        print(f"Erreur get_admin_dashboard_stats: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Erreur serveur: {str(e)}'
+        }), 500
 
 @employee_requests_bp.route('/stats', methods=['GET'])
 @require_login
@@ -318,17 +475,14 @@ def get_stats():
     """Statistiques des demandes pour l'utilisateur"""
     user_id = session['user_id']
     
-    # Compter par type
     loan_count = EmployeeRequest.query.filter_by(user_id=user_id, type='loan').count()
     leave_count = EmployeeRequest.query.filter_by(user_id=user_id, type='leave').count()
     permission_count = EmployeeRequest.query.filter_by(user_id=user_id, type='permission').count()
     
-    # Compter par statut
     pending_count = EmployeeRequest.query.filter_by(user_id=user_id, status='pending').count()
     approved_count = EmployeeRequest.query.filter_by(user_id=user_id, status='approved').count()
     rejected_count = EmployeeRequest.query.filter_by(user_id=user_id, status='rejected').count()
     
-    # Jours de congés utilisés cette année
     used_leave_days = db.session.query(db.func.sum(EmployeeRequest.days)).filter(
         EmployeeRequest.user_id == user_id,
         EmployeeRequest.type == 'leave',
@@ -355,31 +509,4 @@ def get_stats():
                 'remaining': 30 - used_leave_days
             }
         }
-    }), 200
-
-
-@employee_requests_bp.route('/admin/dashboard', methods=['GET'])
-@require_admin
-def admin_dashboard():
-    """Dashboard admin pour gérer toutes les demandes"""
-    user = User.query.get(session['user_id'])
-    
-    # Statistiques globales
-    total_pending = EmployeeRequest.query.filter_by(status='pending').count()
-    total_approved = EmployeeRequest.query.filter_by(status='approved').count()
-    total_rejected = EmployeeRequest.query.filter_by(status='rejected').count()
-    
-    # Demandes récentes
-    recent_requests = EmployeeRequest.query.order_by(
-        EmployeeRequest.created_at.desc()
-    ).limit(10).all()
-    
-    return jsonify({
-        'success': True,
-        'stats': {
-            'pending': total_pending,
-            'approved': total_approved,
-            'rejected': total_rejected
-        },
-        'recent_requests': [req.to_dict() for req in recent_requests]
     }), 200

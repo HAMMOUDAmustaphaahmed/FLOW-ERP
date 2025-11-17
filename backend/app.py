@@ -1,5 +1,5 @@
 # app.py
-from flask import Flask, render_template, session, redirect, url_for, current_app
+from flask import Flask, render_template, session, redirect, url_for, current_app, request, jsonify
 from flask_cors import CORS
 from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
@@ -17,6 +17,8 @@ from routes.users import users_bp
 from routes.department_tables import dept_tables_bp
 from routes.department_managers import dept_managers_bp
 from routes.employee_requests import employee_requests_bp
+from routes.payroll import payroll_bp
+from routes.chat import chat_bp, init_socketio
 
 def get_blockchain():
     """Fonction pour obtenir l'instance blockchain sans import circulaire"""
@@ -58,7 +60,11 @@ def create_app(config_name='development'):
     app.register_blueprint(dept_tables_bp)
     app.register_blueprint(dept_managers_bp)
     app.register_blueprint(employee_requests_bp)
+    app.register_blueprint(payroll_bp)
+    app.register_blueprint(chat_bp)
     
+    # Initialiser SocketIO et le retourner
+    socketio = init_socketio(app)
 
     
     # Créer les tables
@@ -116,7 +122,7 @@ def create_app(config_name='development'):
             session.clear()
             return redirect(url_for('auth.login_page'))
         
-        return render_template('department.html', user=user)
+        return render_template('departments.html', user=user)
     
     @app.route('/profile')
     def profile():
@@ -162,8 +168,78 @@ def create_app(config_name='development'):
             return redirect(url_for('dashboard'))
         
         return render_template('admin_requests.html', user=user)
+    
+    @app.route('/chat')
+    def chat_page():
+        """Page de chat/messagerie"""
+        if 'user_id' not in session:
+            return redirect(url_for('auth.login_page'))
         
-        return render_template('department.html')
+        from models.user import User
+        user = User.query.get(session['user_id'])
+        if not user or not user.is_active:
+            session.clear()
+            return redirect(url_for('auth.login_page'))
+        
+        return render_template('internal_chat.html', user=user)
+    
+
+
+    @app.route('/chat/users/search', methods=['GET'])
+    def chat_users_search():
+        """Rechercher des utilisateurs pour le chat"""
+        if 'user_id' not in session:
+            return jsonify({'error': 'Non authentifié'}), 401
+        
+        from models.user import User
+        
+        user = User.query.get(session['user_id'])
+        query = request.args.get('q', '').strip()
+        
+        # Chercher dans la même entreprise, exclure l'utilisateur actuel
+        users_query = User.query.filter(
+            User.company_id == user.company_id,
+            User.id != user.id,
+            User.is_active == True
+        )
+        
+        if query:
+            users_query = users_query.filter(
+                db.or_(
+                    User.username.ilike(f'%{query}%'),
+                    User.first_name.ilike(f'%{query}%'),
+                    User.last_name.ilike(f'%{query}%'),
+                    User.email.ilike(f'%{query}%')
+                )
+            )
+        
+        users = users_query.limit(20).all()
+        
+        return jsonify({
+            'success': True,
+            'users': [{
+                'id': u.id,
+                'username': u.username,
+                'full_name': u.get_full_name(),
+                'email': u.email,
+                'is_online': getattr(u, 'is_online', False)
+            } for u in users]
+        })
+        
+    @app.route('/department/<int:dept_id>')
+    def department_page(dept_id):
+        """Page d'un département"""
+        if 'user_id' not in session:
+            return redirect(url_for('auth.login_page'))
+        
+        from models.user import User
+        from models.company import Department
+        
+        user = User.query.get(session['user_id'])
+        department = Department.query.get_or_404(dept_id)
+        
+        return render_template('department.html', department=department, user=user)
+    
     @app.route('/department-settings/<int:dept_id>')
     def department_settings_page(dept_id):
         """Page de configuration du département avec gestion des tables"""
@@ -329,6 +405,32 @@ def create_app(config_name='development'):
     def forbidden(error):
         return render_template('403.html'), 403
     
+    @app.context_processor
+    def inject_unread_messages():
+        if 'user_id' in session:
+            from models.chat import ChatMessage, ChatConversation
+            user_id = session['user_id']
+            
+            # Compter messages non lus dans conversations 1-to-1
+            conversations = ChatConversation.query.filter(
+                db.or_(
+                    ChatConversation.user1_id == user_id,
+                    ChatConversation.user2_id == user_id
+                )
+            ).all()
+            
+            conv_ids = [c.id for c in conversations]
+            
+            unread_count = ChatMessage.query.filter(
+                ChatMessage.conversation_id.in_(conv_ids),
+                ChatMessage.sender_id != user_id,
+                ChatMessage.is_read == False
+            ).count()
+            
+            return dict(unread_messages_count=unread_count)
+        return dict(unread_messages_count=0)
+    
+    
     # Context processor pour les templates
     @app.context_processor
     def inject_user():
@@ -376,10 +478,11 @@ def create_app(config_name='development'):
         db.session.commit()
         print(f'Administrateur {username} créé avec succès!')
     
-    return app
+    # Retourner app ET socketio
+    return app, socketio
 
 
 # Point d'entrée pour le serveur de développement
 if __name__ == '__main__':
-    app = create_app('development')
-    app.run(host='0.0.0.0', port=5002, debug=True)
+    app, socketio = create_app('development')
+    socketio.run(app, host='0.0.0.0', port=5002, debug=True)

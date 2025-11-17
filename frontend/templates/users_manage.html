@@ -4,6 +4,119 @@
 
 {% block extra_css %}
 <style>
+/* Sous-navbar pour la gestion des employés */
+.employees-subnav {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 2px solid var(--border-color);
+}
+
+.subnav-title {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.subnav-title h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.subnav-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.subnav-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.subnav-btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    text-decoration: none;
+}
+
+.subnav-btn-primary {
+    background: var(--primary-color);
+    color: white;
+}
+
+.subnav-btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.subnav-btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border: 2px solid var(--border-color);
+}
+
+.subnav-btn-secondary:hover {
+    background: var(--bg-secondary);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.subnav-divider {
+    width: 1px;
+    height: 32px;
+    background: var(--border-color);
+}
+
+@media (max-width: 768px) {
+    .employees-subnav {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .subnav-title {
+        justify-content: center;
+    }
+    
+    .subnav-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .subnav-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .subnav-divider {
+        display: none;
+    }
+}
+
 .page-header {
     display: flex;
     justify-content: space-between;
@@ -622,14 +735,26 @@ select.form-input:disabled {
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1>Gestion des Employés</h1>
-        <p class="text-secondary">Gérez les utilisateurs et leurs permissions</p>
+<!-- Sous-navbar de gestion des employés -->
+<div class="employees-subnav">
+    <div class="subnav-title">
+        <div class="subnav-icon">
+            <i class="fas fa-users"></i>
+        </div>
+        <h2>Gestion des Employés</h2>
     </div>
-    <button class="btn btn-primary" onclick="openAddUserModal()">
-        <i class="fas fa-plus"></i> Ajouter un employé
-    </button>
+    
+    <div class="subnav-actions">
+        <button class="subnav-btn subnav-btn-primary" onclick="openAddUserModal()">
+            <i class="fas fa-user-plus"></i> Ajouter un employé
+        </button>
+        
+        <span class="subnav-divider"></span>
+        
+        <a href="/payroll/manage" class="subnav-btn subnav-btn-secondary">
+            <i class="fas fa-cog"></i> Configuration des employés
+        </a>
+    </div>
 </div>
 
 <!-- Filtres et recherche -->
@@ -1047,7 +1172,10 @@ async function editUser(userId) {
             
             // Permissions
             Object.entries(user.permissions).forEach(([perm, value]) => {
-                const checkbox = document.getElementById(`can${perm.charAt(0).toUpperCase() + perm.slice(1).replace('_', '')}`);
+                const permName = perm.split('_').map((word, idx) => 
+                    idx === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1)
+                ).join('');
+                const checkbox = document.getElementById(`can${permName.charAt(0).toUpperCase() + permName.slice(1)}`);
                 if (checkbox) checkbox.checked = value;
             });
             
@@ -1163,20 +1291,29 @@ function handleRoleChange() {
     
     if (rolePermissions[role]) {
         Object.entries(rolePermissions[role]).forEach(([perm, value]) => {
-            const checkbox = document.getElementById(`can${perm.charAt(0).toUpperCase() + perm.slice(1).replace('_', '')}`);
+            const permName = perm.split('_').map((word, idx) => 
+                idx === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1)
+            ).join('');
+            const checkbox = document.getElementById(`can${permName.charAt(0).toUpperCase() + permName.slice(1)}`);
             if (checkbox) checkbox.checked = value;
         });
     }
 }
 
 function showSuccess(message) {
-    // Implémentez votre système de notification
-    alert(message);
+    if (window.FlowERP && window.FlowERP.showNotification) {
+        window.FlowERP.showNotification(message, 'success');
+    } else {
+        alert(message);
+    }
 }
 
 function showError(message) {
-    // Implémentez votre système de notification
-    alert(message);
+    if (window.FlowERP && window.FlowERP.showNotification) {
+        window.FlowERP.showNotification(message, 'error');
+    } else {
+        alert(message);
+    }
 }
 
 // Initialisation

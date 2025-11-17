@@ -4,6 +4,8 @@ Flask-SQLAlchemy==3.1.1
 Flask-CORS==4.0.0
 Flask-Session==0.5.0
 Flask-Login==0.6.3
+flask-socketio 
+python-socketio
 
 # Base de données
 SQLAlchemy==2.0.23

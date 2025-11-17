@@ -1,4 +1,3 @@
-# routes/users.py
 from flask import Blueprint, request, jsonify, session, render_template, redirect, url_for
 from models.user import User
 from database import db
@@ -133,31 +132,36 @@ def create_user():
 @users_bp.route('/list', methods=['GET'])
 @require_login
 def list_users():
-    """Lister tous les utilisateurs avec filtres et recherche"""
+    """Lister tous les utilisateurs avec filtres et recherche - AVEC PERMISSIONS"""
     user = User.query.get(session['user_id'])
+    
+    # 🔒 VÉRIFICATION DES PERMISSIONS
+    # Seuls admin, directeur_rh et assistant_administratif peuvent voir la liste users
+    if not (user.is_admin or user.role in ['directeur_rh', 'assistant_administratif']):
+        return jsonify({
+            'success': False,
+            'error': 'Accès refusé. Vous n\'avez pas les permissions pour consulter la liste des utilisateurs.'
+        }), 403
     
     # Paramètres de recherche et filtrage
     search = request.args.get('search', '').strip()
     role_filter = request.args.get('role')
     department_filter = request.args.get('department_id', type=int)
-    status_filter = request.args.get('status')  # 'active', 'inactive'
+    status_filter = request.args.get('status')
     
     # Pagination
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 50, type=int)
     
     # Query de base - filtrer par entreprise
-    if user.is_admin and user.company_id:
+    if user.is_admin or user.role in ['directeur_rh', 'assistant_administratif']:
+        # Ils voient TOUS les users de l'entreprise
         query = User.query.filter_by(company_id=user.company_id)
     else:
-        # Non-admin ne voit que les users de son département
-        if user.department_id:
-            query = User.query.filter_by(
-                company_id=user.company_id,
-                department_id=user.department_id
-            )
-        else:
-            return jsonify({'error': 'Accès non autorisé'}), 403
+        return jsonify({
+            'success': False,
+            'error': 'Accès refusé'
+        }), 403
     
     # Recherche textuelle
     if search:
@@ -198,7 +202,6 @@ def list_users():
         'per_page': per_page,
         'pages': pagination.pages
     }), 200
-
 
 @users_bp.route('/search', methods=['GET'])
 @require_login
@@ -374,9 +377,20 @@ def update_user(user_id):
 
 
 @users_bp.route('/delete/<int:user_id>', methods=['DELETE'])
-@require_admin
+@require_login
 def delete_user(user_id):
-    """Désactiver un utilisateur"""
+    """Désactiver un utilisateur - PERMISSIONS STRICTES"""
+    current_user = User.query.get(session['user_id'])
+    
+    # 🔒 VÉRIFICATION : Seuls admin et directeur_rh peuvent supprimer
+    # Assistant admin NE PEUT PAS supprimer
+    if not current_user.can_delete_users:
+        return jsonify({
+            'success': False,
+            'error': 'Accès refusé. Vous n\'avez pas la permission de supprimer des utilisateurs.'
+        }), 403
+    
+    # Ne pas se supprimer soi-même
     if user_id == session['user_id']:
         return jsonify({'error': 'Vous ne pouvez pas supprimer votre propre compte'}), 400
     
@@ -395,7 +409,7 @@ def delete_user(user_id):
             'user_deleted',
             'user',
             user_id,
-            {'username': user.username}
+            {'username': user.username, 'deleted_by': current_user.username}
         )
         
         # Soft delete
@@ -410,7 +424,6 @@ def delete_user(user_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Erreur lors de la suppression: {str(e)}'}), 500
-
 
 @users_bp.route('/reset-password/<int:user_id>', methods=['POST'])
 @require_admin
@@ -449,15 +462,14 @@ def reset_user_password(user_id):
         return jsonify({'error': f'Erreur: {str(e)}'}), 500
 
 
-# Route pour la page HTML
 @users_bp.route('/manage', methods=['GET'])
 @require_login
 def manage_users_page():
-    """Page de gestion des utilisateurs"""
+    """Page de gestion des utilisateurs - AVEC VÉRIFICATION"""
     current_user = User.query.get(session['user_id'])
     
-    # Seuls les admins et department_managers peuvent accéder
-    if not current_user.is_admin and current_user.role != 'department_manager':
+    # Seuls admin, directeur_rh et assistant_administratif peuvent accéder
+    if not (current_user.is_admin or current_user.role in ['directeur_rh', 'assistant_administratif']):
         return redirect(url_for('dashboard'))
     
     return render_template('users_manage.html', user=current_user)
