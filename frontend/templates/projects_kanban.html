@@ -349,264 +349,350 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Script complet pour projects_kanban.html -->
 <script>
-    let allTasks = [];
-    let currentProjectId = null;
-    let taskModal = null;
+let allTasks = [];
+let currentProjectId = null;
+let taskModal = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+    loadProjects();
+    loadUsers();
+    setupDragAndDrop();
+});
+
+async function loadProjects() {
+    try {
+        const response = await fetch('/projects/api/list?status=active');
+        const data = await response.json();
+        
+        if (data.success) {
+            const select = document.getElementById('projectFilter');
+            data.projects.forEach(project => {
+                select.add(new Option(project.name, project.id));
+            });
+            
+            if (data.projects.length > 0) {
+                select.value = data.projects[0].id;
+                currentProjectId = data.projects[0].id;
+                loadKanbanData();
+            }
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+    }
+}
+
+async function loadUsers() {
+    try {
+        const response = await fetch('/users/list');
+        const data = await response.json();
+        
+        if (data.success) {
+            const select = document.getElementById('assignToSelect');
+            const filterSelect = document.getElementById('assignedFilter');
+            
+            data.users.forEach(user => {
+                select.add(new Option(user.full_name || user.username, user.id));
+                filterSelect.add(new Option(user.full_name || user.username, user.id));
+            });
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+    }
+}
+
+async function loadKanbanData() {
+    const projectId = document.getElementById('projectFilter').value;
+    if (!projectId) return;
     
-    document.addEventListener('DOMContentLoaded', function() {
-        taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
-        loadProjects();
-        loadUsers();
-        setupDragAndDrop();
+    currentProjectId = projectId;
+    
+    try {
+        const response = await fetch(`/projects/api/kanban/${projectId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            allTasks = [];
+            Object.entries(data.columns).forEach(([column, tasks]) => {
+                allTasks = allTasks.concat(tasks);
+            });
+            renderKanban(data.columns);
+            setupDragAndDrop(); // Réinitialiser après le rendu
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+    }
+}
+
+function renderKanban(columns) {
+    Object.entries(columns).forEach(([columnName, tasks]) => {
+        const container = document.querySelector(`.kanban-cards[data-column="${columnName}"]`);
+        const countBadge = document.querySelector(`.kanban-column[data-column="${columnName}"] .kanban-column-count`);
+        
+        if (!container) return;
+        
+        container.innerHTML = '';
+        if (countBadge) {
+            countBadge.textContent = tasks.length;
+        }
+        
+        tasks.forEach(task => {
+            container.appendChild(createTaskCard(task));
+        });
+    });
+}
+
+function createTaskCard(task) {
+    const card = document.createElement('div');
+    card.className = 'kanban-card';
+    card.draggable = true;
+    card.dataset.taskId = task.id;
+    
+    const assignee = task.assigned_to 
+        ? `<span><i class="fas fa-user"></i> ${task.assigned_to.name}</span>`
+        : '<span class="text-muted">Non assigné</span>';
+    
+    card.innerHTML = `
+        <div class="kanban-card-title">
+            <span class="priority-dot priority-${task.priority}"></span>
+            ${escapeHtml(task.title)}
+        </div>
+        <div class="kanban-card-meta">
+            ${assignee}
+            <span>${task.progress_percentage || 0}%</span>
+        </div>
+        <div class="mt-2">
+            <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); editTaskKanban(${task.id})">
+                <i class="fas fa-edit"></i>
+            </button>
+            ${task.status !== 'completed' ? `
+                <button class="btn btn-sm btn-outline-success" onclick="event.stopPropagation(); markCompleted(${task.id})">
+                    <i class="fas fa-check"></i>
+                </button>
+            ` : ''}
+        </div>
+    `;
+    
+    return card;
+}
+
+function setupDragAndDrop() {
+    // Événement dragstart sur les cartes
+    document.addEventListener('dragstart', function(e) {
+        if (e.target.classList.contains('kanban-card')) {
+            e.target.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', e.target.dataset.taskId);
+        }
     });
     
-    async function loadProjects() {
-        try {
-            const response = await fetch('/projects/api/list?status=active');
-            const data = await response.json();
-            
-            if (data.success) {
-                const select = document.getElementById('projectFilter');
-                data.projects.forEach(project => {
-                    select.add(new Option(project.name, project.id));
-                });
-                
-                // Charger premier projet par défaut
-                if (data.projects.length > 0) {
-                    select.value = data.projects[0].id;
-                    currentProjectId = data.projects[0].id;
-                    loadKanbanData();
-                }
-            }
-        } catch (error) {
-            console.error('Erreur:', error);
+    // Événement dragend
+    document.addEventListener('dragend', function(e) {
+        if (e.target.classList.contains('kanban-card')) {
+            e.target.classList.remove('dragging');
         }
-    }
+    });
     
-    async function loadUsers() {
-        try {
-            const response = await fetch('/users/list');
-            const data = await response.json();
-            
-            if (data.success) {
-                const select = document.getElementById('assignToSelect');
-                const filterSelect = document.getElementById('assignedFilter');
-                
-                data.users.forEach(user => {
-                    select.add(new Option(user.full_name || user.username, user.id));
-                    filterSelect.add(new Option(user.full_name || user.username, user.id));
-                });
-            }
-        } catch (error) {
-            console.error('Erreur:', error);
-        }
-    }
-    
-    async function loadKanbanData() {
-        const projectId = document.getElementById('projectFilter').value;
-        if (!projectId) return;
-        
-        currentProjectId = projectId;
-        
-        try {
-            const response = await fetch(`/projects/api/kanban/${projectId}`);
-            const data = await response.json();
-            
-            if (data.success) {
-                allTasks = [];
-                Object.entries(data.columns).forEach(([column, tasks]) => {
-                    allTasks = allTasks.concat(tasks);
-                });
-                renderKanban(data.columns);
-            }
-        } catch (error) {
-            console.error('Erreur:', error);
-        }
-    }
-    
-    function renderKanban(columns) {
-        Object.entries(columns).forEach(([columnName, tasks]) => {
-            const container = document.querySelector(`.kanban-cards[data-column="${columnName}"]`);
-            const countBadge = document.querySelector(`.kanban-column[data-column="${columnName}"] .kanban-column-count`);
-            
-            container.innerHTML = '';
-            countBadge.textContent = tasks.length;
-            
-            tasks.forEach(task => {
-                container.appendChild(createTaskCard(task));
-            });
-        });
-    }
-    
-    function createTaskCard(task) {
-        const card = document.createElement('div');
-        card.className = 'kanban-card';
-        card.draggable = true;
-        card.dataset.taskId = task.id;
-        
-        const labels = task.labels && task.labels.length > 0
-            ? `<div class="kanban-card-labels">
-                ${task.labels.map(l => `<span class="label-badge">${l}</span>`).join('')}
-               </div>`
-            : '';
-        
-        const assignee = task.assigned_to 
-            ? `<span><i class="fas fa-user"></i> ${task.assigned_to.name}</span>`
-            : '<span class="text-muted">Non assigné</span>';
-        
-        card.innerHTML = `
-            <div class="kanban-card-title">
-                <span class="priority-dot priority-${task.priority}"></span>
-                ${escapeHtml(task.title)}
-            </div>
-            ${labels}
-            <div class="kanban-card-meta">
-                ${assignee}
-                <span>${task.progress_percentage || 0}%</span>
-            </div>
-        `;
-        
-        card.addEventListener('click', () => openTaskDetails(task.id));
-        
-        return card;
-    }
-    
-    function setupDragAndDrop() {
-        const cards = document.querySelectorAll('.kanban-card');
-        const columns = document.querySelectorAll('.kanban-cards');
-        
-        document.addEventListener('dragstart', function(e) {
-            if (e.target.classList.contains('kanban-card')) {
-                e.target.classList.add('dragging');
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', e.target.dataset.taskId);
-            }
+    // Événements sur les colonnes
+    const columns = document.querySelectorAll('.kanban-cards');
+    columns.forEach(column => {
+        column.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            this.style.backgroundColor = '#f0f0f0';
         });
         
-        document.addEventListener('dragend', function(e) {
-            if (e.target.classList.contains('kanban-card')) {
-                e.target.classList.remove('dragging');
-            }
+        column.addEventListener('dragleave', function(e) {
+            this.style.backgroundColor = '';
         });
         
-        columns.forEach(column => {
-            column.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
-            });
+        column.addEventListener('drop', async function(e) {
+            e.preventDefault();
+            this.style.backgroundColor = '';
             
-            column.addEventListener('drop', async function(e) {
-                e.preventDefault();
-                const taskId = e.dataTransfer.getData('text/plain');
-                const targetColumn = this.dataset.column;
-                
-                await moveTask(taskId, targetColumn);
-            });
+            const taskId = e.dataTransfer.getData('text/plain');
+            const targetColumn = this.dataset.column;
+            
+            await moveTask(taskId, targetColumn);
         });
-    }
-    
-    async function moveTask(taskId, targetColumn) {
-        try {
-            const response = await fetch('/projects/api/kanban/move-task', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    task_id: parseInt(taskId),
-                    target_column: targetColumn
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                loadKanbanData(); // Recharger
-            } else {
-                alert('Erreur lors du déplacement');
-            }
-        } catch (error) {
-            console.error('Erreur:', error);
-            alert('Erreur de connexion');
-        }
-    }
-    
-    function openTaskModal(column) {
-        document.getElementById('taskColumn').value = column;
-        document.getElementById('taskForm').reset();
-        taskModal.show();
-    }
-    
-    async function saveTask() {
-        const form = document.getElementById('taskForm');
-        const formData = new FormData(form);
-        const data = Object.fromEntries(formData.entries());
-        
-        if (!data.title) {
-            alert('Le titre est requis');
-            return;
-        }
-        
-        try {
-            const response = await fetch(`/projects/api/${currentProjectId}/tasks`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                taskModal.hide();
-                loadKanbanData();
-            } else {
-                alert('Erreur: ' + result.error);
-            }
-        } catch (error) {
-            console.error('Erreur:', error);
-            alert('Erreur de connexion');
-        }
-    }
-    
-    function openTaskDetails(taskId) {
-        // TODO: Ouvrir modal détails tâche
-        console.log('Open task:', taskId);
-    }
-    
-    function filterCards() {
-        const assignedFilter = document.getElementById('assignedFilter').value;
-        const priorityFilter = document.getElementById('priorityFilter').value;
-        const searchText = document.getElementById('searchFilter').value.toLowerCase();
-        
-        let filtered = allTasks;
-        
-        if (assignedFilter) {
-            filtered = filtered.filter(t => t.assigned_to?.id == assignedFilter);
-        }
-        
-        if (priorityFilter) {
-            filtered = filtered.filter(t => t.priority === priorityFilter);
-        }
-        
-        if (searchText) {
-            filtered = filtered.filter(t => 
-                t.title.toLowerCase().includes(searchText) ||
-                (t.description && t.description.toLowerCase().includes(searchText))
-            );
-        }
-        
-        // Regrouper par colonne
-        const groupedByColumn = {};
-        ['backlog', 'todo', 'in_progress', 'in_review', 'completed'].forEach(col => {
-            groupedByColumn[col] = filtered.filter(t => t.kanban_column === col);
+    });
+}
+
+async function moveTask(taskId, targetColumn) {
+    try {
+        const response = await fetch('/projects/api/kanban/move-task', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                task_id: parseInt(taskId),
+                target_column: targetColumn
+            })
         });
         
-        renderKanban(groupedByColumn);
+        const data = await response.json();
+        
+        if (data.success) {
+            loadKanbanData();
+        } else {
+            showNotification('Erreur lors du déplacement', 'error');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('Erreur de connexion', 'error');
+    }
+}
+
+function openTaskModal(column) {
+    document.getElementById('taskColumn').value = column;
+    document.getElementById('taskForm').reset();
+    taskModal.show();
+}
+
+async function editTaskKanban(taskId) {
+    try {
+        const response = await fetch(`/projects/api/tasks/${taskId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const task = data.task;
+            const form = document.getElementById('taskForm');
+            
+            form.querySelector('[name="title"]').value = task.title;
+            form.querySelector('[name="description"]').value = task.description || '';
+            form.querySelector('[name="priority"]').value = task.priority;
+            form.querySelector('[name="assigned_to_id"]').value = task.assigned_to?.id || '';
+            form.querySelector('[name="start_date"]').value = task.start_date ? task.start_date.split('T')[0] : '';
+            form.querySelector('[name="due_date"]').value = task.due_date ? task.due_date.split('T')[0] : '';
+            
+            // Mode édition
+            form.dataset.taskId = taskId;
+            taskModal.show();
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+    }
+}
+
+async function saveTask() {
+    const form = document.getElementById('taskForm');
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+    
+    if (!data.title) {
+        showNotification('Le titre est requis', 'warning');
+        return;
     }
     
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+    try {
+        let url, method;
+        
+        if (form.dataset.taskId) {
+            // Mode édition
+            url = `/projects/api/tasks/${form.dataset.taskId}`;
+            method = 'PUT';
+        } else {
+            // Mode création
+            url = `/projects/api/${currentProjectId}/tasks`;
+            method = 'POST';
+        }
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            taskModal.hide();
+            showNotification('Tâche enregistrée', 'success');
+            loadKanbanData();
+            delete form.dataset.taskId;
+        } else {
+            showNotification('Erreur: ' + result.error, 'error');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('Erreur de connexion', 'error');
     }
+}
+
+async function markCompleted(taskId) {
+    try {
+        const response = await fetch(`/projects/api/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                status: 'completed',
+                progress_percentage: 100
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Tâche terminée', 'success');
+            loadKanbanData();
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+    }
+}
+
+function filterCards() {
+    const assignedFilter = document.getElementById('assignedFilter').value;
+    const priorityFilter = document.getElementById('priorityFilter').value;
+    const searchText = document.getElementById('searchFilter').value.toLowerCase();
+    
+    let filtered = allTasks;
+    
+    if (assignedFilter) {
+        filtered = filtered.filter(t => t.assigned_to?.id == assignedFilter);
+    }
+    
+    if (priorityFilter) {
+        filtered = filtered.filter(t => t.priority === priorityFilter);
+    }
+    
+    if (searchText) {
+        filtered = filtered.filter(t => 
+            t.title.toLowerCase().includes(searchText) ||
+            (t.description && t.description.toLowerCase().includes(searchText))
+        );
+    }
+    
+    const groupedByColumn = {};
+    ['backlog', 'todo', 'in_progress', 'in_review', 'completed'].forEach(col => {
+        groupedByColumn[col] = filtered.filter(t => t.kanban_column === col);
+    });
+    
+    renderKanban(groupedByColumn);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+    notification.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
 </script>
 {% endblock %}

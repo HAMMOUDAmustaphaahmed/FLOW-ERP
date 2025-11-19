@@ -7,6 +7,301 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* ========================================
+   PAGE D'AUTHENTIFICATION
+   À ajouter à la fin de style.css
+   ======================================== */
+
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+    padding: var(--spacing-lg);
+}
+
+.auth-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-xl);
+    max-width: 1200px;
+    width: 100%;
+}
+
+.auth-card {
+    background: var(--bg-primary);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-2xl);
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.auth-logo {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto var(--spacing-md);
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border-radius: var(--border-radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: white;
+}
+
+.auth-logo.pulse {
+    animation: pulse 2s infinite;
+}
+
+.auth-header h1 {
+    font-size: 2rem;
+    margin-bottom: var(--spacing-sm);
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.auth-subtitle {
+    color: var(--text-secondary);
+    font-size: 1rem;
+}
+
+/* Input de mot de passe avec toggle */
+.password-input-wrapper {
+    position: relative;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: color var(--transition-fast);
+}
+
+.password-toggle:hover {
+    color: var(--primary-color);
+}
+
+/* Force du mot de passe */
+.password-strength {
+    margin-top: var(--spacing-sm);
+}
+
+.strength-bar {
+    height: 4px;
+    background: var(--bg-tertiary);
+    border-radius: var(--border-radius-full);
+    overflow: hidden;
+}
+
+.strength-fill {
+    height: 100%;
+    transition: all var(--transition-normal);
+}
+
+.strength-text {
+    display: block;
+    margin-top: var(--spacing-xs);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Exigences mot de passe */
+.password-requirements {
+    margin: var(--spacing-md) 0;
+    padding: var(--spacing-md);
+    background: var(--bg-tertiary);
+    border-radius: var(--border-radius);
+}
+
+.requirements-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+}
+
+#passwordChecklist {
+    list-style: none;
+    padding-left: 0;
+}
+
+#passwordChecklist li {
+    font-size: 0.875rem;
+    margin: var(--spacing-xs) 0;
+    transition: color var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+#passwordChecklist li::before {
+    content: '○';
+    color: var(--text-muted);
+    font-weight: bold;
+}
+
+#passwordChecklist li.valid {
+    color: var(--success-color);
+}
+
+#passwordChecklist li.valid::before {
+    content: '✓';
+    color: var(--success-color);
+}
+
+/* Illustration côté droit */
+.auth-illustration {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-align: center;
+}
+
+.blockchain-animation {
+    display: flex;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.block-node {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border-radius: var(--border-radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    animation: float 3s ease-in-out infinite;
+}
+
+.block-node:nth-child(2) {
+    animation-delay: 0.5s;
+}
+
+.block-node:nth-child(3) {
+    animation-delay: 1s;
+}
+
+.block-node:nth-child(4) {
+    animation-delay: 1.5s;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+.illustration-text h2 {
+    font-size: 2rem;
+    margin-bottom: var(--spacing-lg);
+}
+
+.feature-list {
+    list-style: none;
+    text-align: left;
+    padding-left: 0;
+}
+
+.feature-list li {
+    margin: var(--spacing-md) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.feature-list li i {
+    color: white;
+    font-size: 1.25rem;
+}
+
+/* Info sécurité */
+.security-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+    background: var(--bg-tertiary);
+    border-radius: var(--border-radius);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-top: var(--spacing-lg);
+}
+
+.security-info i {
+    color: var(--success-color);
+}
+
+/* Loader pour bouton */
+.button-loader {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.button-loader i {
+    animation: spin 1s linear infinite;
+}
+
+/* Responsive pour auth pages */
+@media (max-width: 1024px) {
+    .auth-container {
+        grid-template-columns: 1fr;
+        max-width: 600px;
+    }
+    
+    .auth-illustration {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .auth-page {
+        padding: var(--spacing-md);
+    }
+    
+    .auth-card {
+        padding: var(--spacing-lg);
+    }
+    
+    .auth-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .auth-logo {
+        width: 60px;
+        height: 60px;
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .auth-card {
+        padding: var(--spacing-md);
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+    </style>
 </head>
 <body class="auth-page">
     <div class="auth-container">
