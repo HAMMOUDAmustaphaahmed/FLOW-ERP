@@ -1,0 +1,669 @@
+{% extends "base.html" %}
+
+{% block title %}Mes Tâches - FlowERP{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tickets.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+    .tasks-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px 20px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+    }
+    
+    .tasks-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .stat-box {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .stat-box h3 {
+        font-size: 2rem;
+        margin: 0;
+    }
+    
+    .filters-bar {
+        background: white;
+        padding: 15px 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .task-list {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    
+    .task-item {
+        border-bottom: 1px solid #e2e8f0;
+        padding: 15px 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+    
+    .task-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .task-item:last-child {
+        border-bottom: none;
+    }
+    
+    .task-checkbox {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+    
+    .task-priority {
+        width: 4px;
+        height: 40px;
+        border-radius: 2px;
+    }
+    
+    .priority-P1 { background: #dc3545; }
+    .priority-P2 { background: #fd7e14; }
+    .priority-P3 { background: #0d6efd; }
+    .priority-P4 { background: #6c757d; }
+    
+    .task-content {
+        flex: 1;
+    }
+    
+    .task-title {
+        font-weight: 600;
+        margin-bottom: 5px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .task-meta {
+        display: flex;
+        gap: 15px;
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+    
+    .task-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .task-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .status-todo { background: #e7f3ff; color: #0d6efd; }
+    .status-in_progress { background: #fff3cd; color: #856404; }
+    .status-in_review { background: #d1ecf1; color: #0c5460; }
+    .status-completed { background: #d1f2eb; color: #198754; }
+    .status-blocked { background: #f8d7da; color: #842029; }
+    
+    .task-completed {
+        opacity: 0.6;
+    }
+    
+    .task-completed .task-title {
+        text-decoration: line-through;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #64748b;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        opacity: 0.3;
+    }
+    
+    .progress-bar-custom {
+        height: 6px;
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+        margin-top: 8px;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        transition: width 0.3s;
+    }
+    
+    .tabs-nav {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .tab-btn {
+        padding: 10px 20px;
+        background: none;
+        border: none;
+        color: #64748b;
+        font-weight: 600;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s;
+    }
+    
+    .tab-btn.active {
+        color: #667eea;
+        border-bottom-color: #667eea;
+    }
+    
+    .task-group {
+        margin-bottom: 30px;
+    }
+    
+    .task-group-header {
+        font-weight: 700;
+        color: #1e293b;
+        padding: 10px 20px;
+        background: #f8f9fa;
+        border-radius: 8px 8px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- En-tête -->
+    <div class="tasks-header">
+        <h2><i class="fas fa-tasks"></i> Mes Tâches</h2>
+        <p class="mb-0">Gérez vos tâches et suivez votre progression</p>
+        
+        <div class="tasks-stats">
+            <div class="stat-box">
+                <h3 id="totalTasks">0</h3>
+                <p class="mb-0">Total</p>
+            </div>
+            <div class="stat-box">
+                <h3 id="todoTasks">0</h3>
+                <p class="mb-0">À faire</p>
+            </div>
+            <div class="stat-box">
+                <h3 id="inProgressTasks">0</h3>
+                <p class="mb-0">En cours</p>
+            </div>
+            <div class="stat-box">
+                <h3 id="completedTasks">0</h3>
+                <p class="mb-0">Terminées</p>
+            </div>
+            <div class="stat-box">
+                <h3 id="overdueTasks">0</h3>
+                <p class="mb-0">En retard</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Onglets -->
+    <div class="tabs-nav">
+        <button class="tab-btn active" data-tab="my-tasks" onclick="switchTab('my-tasks')">
+            <i class="fas fa-user"></i> Mes tâches
+        </button>
+        <button class="tab-btn" data-tab="assigned" onclick="switchTab('assigned')">
+            <i class="fas fa-users"></i> Assignées par moi
+        </button>
+        <button class="tab-btn" data-tab="all" onclick="switchTab('all')">
+            <i class="fas fa-list"></i> Toutes les tâches
+        </button>
+    </div>
+    
+    <!-- Filtres -->
+    <div class="filters-bar">
+        <input type="text" class="form-control" id="searchInput" 
+               placeholder="Rechercher une tâche..." style="width: 300px;"
+               oninput="applyFilters()">
+        
+        <select class="form-select" id="projectFilter" style="width: 200px;" onchange="applyFilters()">
+            <option value="">Tous les projets</option>
+        </select>
+        
+        <select class="form-select" id="priorityFilter" style="width: 150px;" onchange="applyFilters()">
+            <option value="">Toutes priorités</option>
+            <option value="P1">P1 - Critique</option>
+            <option value="P2">P2 - Haute</option>
+            <option value="P3">P3 - Normale</option>
+            <option value="P4">P4 - Basse</option>
+        </select>
+        
+        <select class="form-select" id="statusFilter" style="width: 150px;" onchange="applyFilters()">
+            <option value="">Tous statuts</option>
+            <option value="todo">À faire</option>
+            <option value="in_progress">En cours</option>
+            <option value="in_review">En revue</option>
+            <option value="completed">Terminé</option>
+            <option value="blocked">Bloqué</option>
+        </select>
+        
+        <select class="form-select" id="sortBy" style="width: 150px;" onchange="applyFilters()">
+            <option value="due_date">Date d'échéance</option>
+            <option value="priority">Priorité</option>
+            <option value="created_at">Date de création</option>
+            <option value="title">Titre (A-Z)</option>
+        </select>
+        
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="hideCompleted" onchange="applyFilters()">
+            <label class="form-check-label" for="hideCompleted">
+                Masquer terminées
+            </label>
+        </div>
+    </div>
+    
+    <!-- Liste des tâches -->
+    <div id="tasksContainer"></div>
+</div>
+
+<!-- Modal Détails Tâche -->
+<div class="modal fade" id="taskDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Détails de la Tâche</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="taskDetailBody">
+                <!-- Contenu chargé dynamiquement -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-primary" onclick="editCurrentTask()">
+                    <i class="fas fa-edit"></i> Modifier
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let allTasks = [];
+    let currentTab = 'my-tasks';
+    let currentTask = null;
+    let taskDetailModal = null;
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        taskDetailModal = new bootstrap.Modal(document.getElementById('taskDetailModal'));
+        loadTasks();
+        loadProjects();
+    });
+    
+    async function loadTasks() {
+        try {
+            // Charger selon l'onglet actif
+            let url = '/projects/api/tasks/my-tasks';
+            if (currentTab === 'assigned') {
+                url = '/projects/api/tasks/assigned-by-me';
+            } else if (currentTab === 'all') {
+                url = '/projects/api/tasks/all';
+            }
+            
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.success) {
+                allTasks = data.tasks;
+                applyFilters();
+                updateStats();
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }
+    
+    function applyFilters() {
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const project = document.getElementById('projectFilter').value;
+        const priority = document.getElementById('priorityFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        const sortBy = document.getElementById('sortBy').value;
+        const hideCompleted = document.getElementById('hideCompleted').checked;
+        
+        let filtered = allTasks.filter(task => {
+            // Recherche
+            if (search) {
+                const match = task.title.toLowerCase().includes(search) ||
+                             (task.description && task.description.toLowerCase().includes(search));
+                if (!match) return false;
+            }
+            
+            // Filtres
+            if (project && task.project_id != project) return false;
+            if (priority && task.priority !== priority) return false;
+            if (status && task.status !== status) return false;
+            if (hideCompleted && task.status === 'completed') return false;
+            
+            return true;
+        });
+        
+        // Tri
+        filtered.sort((a, b) => {
+            if (sortBy === 'due_date') {
+                return new Date(a.due_date || '9999-12-31') - new Date(b.due_date || '9999-12-31');
+            } else if (sortBy === 'priority') {
+                const priorityOrder = { P1: 0, P2: 1, P3: 2, P4: 3 };
+                return priorityOrder[a.priority] - priorityOrder[b.priority];
+            } else if (sortBy === 'created_at') {
+                return new Date(b.created_at) - new Date(a.created_at);
+            } else if (sortBy === 'title') {
+                return a.title.localeCompare(b.title);
+            }
+        });
+        
+        renderTasks(filtered);
+    }
+    
+    function renderTasks(tasks) {
+        const container = document.getElementById('tasksContainer');
+        
+        if (tasks.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <h4>Aucune tâche trouvée</h4>
+                    <p>Modifiez vos filtres ou créez une nouvelle tâche</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Grouper par projet
+        const groupedByProject = tasks.reduce((acc, task) => {
+            const projectName = task.project_name || 'Sans projet';
+            if (!acc[projectName]) acc[projectName] = [];
+            acc[projectName].push(task);
+            return acc;
+        }, {});
+        
+        container.innerHTML = Object.entries(groupedByProject).map(([projectName, projectTasks]) => `
+            <div class="task-group">
+                <div class="task-group-header">
+                    <span>${projectName}</span>
+                    <span class="badge bg-secondary">${projectTasks.length} tâche(s)</span>
+                </div>
+                <div class="task-list">
+                    ${projectTasks.map(task => createTaskHTML(task)).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function createTaskHTML(task) {
+        const isCompleted = task.status === 'completed';
+        const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !isCompleted;
+        
+        return `
+            <div class="task-item ${isCompleted ? 'task-completed' : ''}" onclick="openTaskDetails(${task.id})">
+                <input type="checkbox" class="task-checkbox" 
+                       ${isCompleted ? 'checked' : ''}
+                       onclick="event.stopPropagation(); toggleTaskStatus(${task.id}, this.checked)">
+                
+                <div class="task-priority priority-${task.priority}"></div>
+                
+                <div class="task-content">
+                    <div class="task-title">
+                        ${escapeHtml(task.title)}
+                        ${isOverdue ? '<i class="fas fa-exclamation-triangle text-danger" title="En retard"></i>' : ''}
+                    </div>
+                    
+                    <div class="task-meta">
+                        <div class="task-meta-item">
+                            <i class="fas fa-folder"></i>
+                            ${task.project_name || 'Sans projet'}
+                        </div>
+                        
+                        ${task.due_date ? `
+                            <div class="task-meta-item ${isOverdue ? 'text-danger' : ''}">
+                                <i class="fas fa-calendar"></i>
+                                ${formatDate(task.due_date)}
+                            </div>
+                        ` : ''}
+                        
+                        ${task.assigned_to ? `
+                            <div class="task-meta-item">
+                                <i class="fas fa-user"></i>
+                                ${task.assigned_to.name}
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    ${task.progress_percentage > 0 ? `
+                        <div class="progress-bar-custom">
+                            <div class="progress-fill" style="width: ${task.progress_percentage}%"></div>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <span class="status-badge status-${task.status}">
+                    ${getStatusLabel(task.status)}
+                </span>
+            </div>
+        `;
+    }
+    
+    async function toggleTaskStatus(taskId, isCompleted) {
+        try {
+            const response = await fetch(`/projects/api/tasks/${taskId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    status: isCompleted ? 'completed' : 'todo',
+                    progress_percentage: isCompleted ? 100 : 0
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                loadTasks(); // Recharger
+            } else {
+                alert('Erreur lors de la mise à jour');
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }
+    
+    async function openTaskDetails(taskId) {
+        try {
+            const response = await fetch(`/projects/api/tasks/${taskId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                currentTask = data.task;
+                showTaskDetails(data.task);
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }
+    
+    function showTaskDetails(task) {
+        const body = document.getElementById('taskDetailBody');
+        
+        body.innerHTML = `
+            <div class="row">
+                <div class="col-md-8">
+                    <h3>${escapeHtml(task.title)}</h3>
+                    <p class="text-muted">${escapeHtml(task.description || 'Aucune description')}</p>
+                    
+                    <hr>
+                    
+                    <h5>Détails</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Projet:</strong> ${task.project_name || 'N/A'}</p>
+                            <p><strong>Priorité:</strong> <span class="badge priority-${task.priority}">${task.priority}</span></p>
+                            <p><strong>Statut:</strong> <span class="status-badge status-${task.status}">${getStatusLabel(task.status)}</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Assigné à:</strong> ${task.assigned_to?.name || 'Non assigné'}</p>
+                            <p><strong>Date début:</strong> ${formatDate(task.start_date)}</p>
+                            <p><strong>Date échéance:</strong> ${formatDate(task.due_date)}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <strong>Progression: ${task.progress_percentage || 0}%</strong>
+                        <div class="progress-bar-custom">
+                            <div class="progress-fill" style="width: ${task.progress_percentage || 0}%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <h5>Actions</h5>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" onclick="changeTaskStatus('${task.id}', 'in_progress')">
+                            <i class="fas fa-play"></i> Démarrer
+                        </button>
+                        <button class="btn btn-outline-success" onclick="changeTaskStatus('${task.id}', 'completed')">
+                            <i class="fas fa-check"></i> Terminer
+                        </button>
+                        <button class="btn btn-outline-warning" onclick="changeTaskStatus('${task.id}', 'blocked')">
+                            <i class="fas fa-ban"></i> Bloquer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        taskDetailModal.show();
+    }
+    
+    async function changeTaskStatus(taskId, newStatus) {
+        try {
+            const response = await fetch(`/projects/api/tasks/${taskId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                taskDetailModal.hide();
+                loadTasks();
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }
+    
+    function updateStats() {
+        const total = allTasks.length;
+        const todo = allTasks.filter(t => t.status === 'todo').length;
+        const inProgress = allTasks.filter(t => t.status === 'in_progress').length;
+        const completed = allTasks.filter(t => t.status === 'completed').length;
+        
+        const now = new Date();
+        const overdue = allTasks.filter(t => {
+            return t.due_date && new Date(t.due_date) < now && t.status !== 'completed';
+        }).length;
+        
+        document.getElementById('totalTasks').textContent = total;
+        document.getElementById('todoTasks').textContent = todo;
+        document.getElementById('inProgressTasks').textContent = inProgress;
+        document.getElementById('completedTasks').textContent = completed;
+        document.getElementById('overdueTasks').textContent = overdue;
+    }
+    
+    function switchTab(tab) {
+        currentTab = tab;
+        
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+        
+        loadTasks();
+    }
+    
+    async function loadProjects() {
+        try {
+            const response = await fetch('/projects/api/list');
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.getElementById('projectFilter');
+                data.projects.forEach(project => {
+                    select.add(new Option(project.name, project.id));
+                });
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }
+    
+    function getStatusLabel(status) {
+        const labels = {
+            todo: 'À faire',
+            in_progress: 'En cours',
+            in_review: 'En revue',
+            completed: 'Terminé',
+            blocked: 'Bloqué'
+        };
+        return labels[status] || status;
+    }
+    
+    function formatDate(date) {
+        if (!date) return 'N/A';
+        return new Date(date).toLocaleDateString('fr-FR');
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    function editCurrentTask() {
+        if (currentTask) {
+            // TODO: Ouvrir formulaire d'édition
+            alert('Fonctionnalité en cours de développement');
+        }
+    }
+</script>
+{% endblock %}

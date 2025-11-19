@@ -586,6 +586,137 @@
     }
 }
 </style>
+<style>
+
+/* Styles spécifiques pour les fiches de paie */
+.payslip-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.payslip-mini-card {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 2px solid var(--border-color);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.payslip-mini-card:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.2);
+}
+
+.payslip-mini-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.payslip-period {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.payslip-mini-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.payslip-amount {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #10b981;
+}
+
+.payslip-detail-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.875rem;
+}
+
+.payslip-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.year-filter-container {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+}
+
+.empty-payslips {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+}
+
+.empty-payslips i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* Modal Preview Payslip */
+.payslip-preview {
+    max-width: 800px;
+}
+
+.payslip-preview-header {
+    text-align: center;
+    padding: 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px 12px 0 0;
+    margin: -2rem -2rem 2rem -2rem;
+}
+
+.payslip-section {
+    margin-bottom: 2rem;
+}
+
+.payslip-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.payslip-table tr {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.payslip-table td {
+    padding: 0.75rem;
+}
+
+.payslip-table tr.payslip-total {
+    background: var(--bg-tertiary);
+    font-weight: 700;
+}
+
+.payslip-net-total {
+    background: #10b981;
+    color: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    margin-top: 2rem;
+}
+
+.payslip-net-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -622,7 +753,6 @@
                 </div>
             </div>
         </div>
-    </div>
 
     <!-- Contenu principal -->
     <div class="profile-content">
@@ -647,6 +777,13 @@
                     </div>
                     <span>Demandes</span>
                 </a>
+                <!-- 🆕 NOUVELLE SECTION FICHES DE PAIE -->
+                <a href="#" class="profile-menu-item" data-section="payslips" onclick="switchSection(event, 'payslips')">
+                    <div class="profile-menu-icon">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                    <span>Mes Fiches de Paie</span>
+                </a>
                 <a href="#" class="profile-menu-item" data-section="permissions" onclick="switchSection(event, 'permissions')">
                     <div class="profile-menu-icon">
                         <i class="fas fa-shield-alt"></i>
@@ -655,6 +792,7 @@
                 </a>
             </div>
         </div>
+
 
         <!-- Contenu principal -->
         <div class="profile-main">
@@ -820,6 +958,36 @@
                     </table>
                 </div>
             </div>
+            <div id="section-payslips" class="profile-section section-hidden">
+                <h2 class="section-title">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    Mes Fiches de Paie
+                </h2>
+
+                <div class="alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Consultez et téléchargez vos bulletins de salaire. Les fiches sont générées automatiquement chaque mois.</span>
+                </div>
+
+                <!-- Filtres -->
+                <div class="year-filter-container">
+                    <label style="font-weight: 600;">Filtrer par année :</label>
+                    <select id="payslipYearFilter" class="form-control" style="max-width: 150px;" onchange="loadMyPayslips()">
+                        <option value="">Toutes</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="loadMyPayslips()">
+                        <i class="fas fa-sync"></i> Actualiser
+                    </button>
+                </div>
+
+                <!-- Grille des fiches de paie -->
+                <div id="myPayslipsGrid" class="payslip-grid">
+                    <div style="text-align: center; padding: 3rem; grid-column: 1/-1;">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                        <p>Chargement de vos fiches de paie...</p>
+                    </div>
+                </div>
+            </div>
 
             <!-- Section Permissions -->
             <div id="section-permissions" class="profile-section section-hidden">
@@ -980,7 +1148,443 @@
     </div>
 </div>
 
+<!-- 🆕 Modal Prévisualisation Fiche de Paie -->
+<div id="payslipPreviewModal" class="modal-overlay">
+    <div class="modal-dialog" style="max-width: 900px;">
+        <div class="modal-header">
+            <h2><i class="fas fa-file-invoice-dollar"></i> <span id="payslipPreviewTitle">Fiche de Paie</span></h2>
+            <button class="modal-close-btn" onclick="closePayslipPreview()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div id="payslipPreviewContent"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closePayslipPreview()">
+                Fermer
+            </button>
+            <button class="btn btn-primary" onclick="downloadCurrentPayslipPDF()">
+                <i class="fas fa-download"></i> Télécharger PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+
+
 <script>
+    // 🆕 FONCTIONS POUR LES FICHES DE PAIE - VERSION CORRIGÉE
+
+// 🆕 FONCTIONS POUR LES FICHES DE PAIE - VERSION CORRIGÉE
+
+// Variables globales
+let currentPayslipId = null;
+
+// Initialiser le filtre année
+function initializePayslipYearFilter() {
+    const currentYear = new Date().getFullYear();
+    const select = document.getElementById('payslipYearFilter');
+    
+    if (!select) return;
+    
+    // Vider les options existantes sauf la première
+    while (select.options.length > 1) {
+        select.remove(1);
+    }
+    
+    for (let year = currentYear; year >= currentYear - 5; year--) {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        if (year === currentYear) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    }
+}
+
+// Charger mes fiches de paie - VERSION PROFILE (utilisateur uniquement)
+async function loadMyPayslips() {
+    const year = document.getElementById('payslipYearFilter')?.value;
+    
+    // 🔑 IMPORTANT: Ajouter context=profile pour forcer le filtrage par utilisateur
+    let url = '/payroll/payslips?context=profile';
+    
+    if (year) {
+        url += `&year=${year}`;
+    }
+    
+    console.log('🔍 [PROFILE] Chargement des fiches depuis:', url);
+    console.log('🔍 [PROFILE] Utilisateur connecté: {{ current_user.id }}');
+    console.log('🔍 [PROFILE] Est admin: {{ current_user.is_admin }}');
+    
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            credentials: 'include', // ✅ CRUCIAL: inclut la session
+            headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        console.log('📊 [PROFILE] Réponse API:', {
+            success: data.success,
+            count: data.payslips?.length || 0
+        });
+        
+        if (data.success) {
+            const payslips = data.payslips || [];
+            
+            // 🔍 DÉBOGAGE: Vérifier les user_ids retournés
+            if (payslips.length > 0) {
+                const userIds = [...new Set(payslips.map(p => p.user_id))];
+                console.log('👥 [PROFILE] IDs utilisateurs dans les fiches:', userIds);
+                
+                // ⚠️ ALERTE si plusieurs utilisateurs détectés
+                if (userIds.length > 1) {
+                    console.error('❌ [PROFILE] ERREUR: Plusieurs utilisateurs détectés!');
+                    console.error('🔍 Expected user_id: {{ current_user.id }}');
+                    console.error('🔍 Got user_ids:', userIds);
+                    showNotification('Erreur: Fiches de plusieurs utilisateurs retournées', 'error');
+                    return;
+                } else if (userIds[0] !== {{ current_user.id }}) {
+                    console.error('❌ [PROFILE] ERREUR: Mauvais utilisateur!');
+                    console.error('🔍 Expected: {{ current_user.id }}, Got:', userIds[0]);
+                    showNotification('Erreur: Fiches d\'un autre utilisateur retournées', 'error');
+                    return;
+                } else {
+                    console.log('✅ [PROFILE] Correct: Utilisateur {{ current_user.id }}');
+                }
+            }
+            
+            displayMyPayslips(payslips);
+        } else {
+            console.error('❌ [PROFILE] Erreur API:', data.error);
+            showNotification(data.error || 'Erreur lors du chargement des fiches', 'error');
+        }
+    } catch (error) {
+        console.error('❌ [PROFILE] Erreur réseau:', error);
+        showNotification('Erreur de connexion: ' + error.message, 'error');
+    }
+}
+// Afficher les fiches de paie
+function displayMyPayslips(payslips) {
+    const container = document.getElementById('myPayslipsGrid');
+    
+    if (!payslips || payslips.length === 0) {
+        container.innerHTML = `
+            <div class="empty-payslips" style="grid-column: 1/-1;">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <h3>Aucune fiche de paie</h3>
+                <p>Vous n'avez pas encore de fiche de paie disponible</p>
+            </div>
+        `;
+        return;
+    }
+    
+    const monthNames = [
+        'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    ];
+    
+    container.innerHTML = payslips.map(payslip => {
+        const statusColors = {
+            draft: '#f59e0b',
+            validated: '#10b981',
+            paid: '#3b82f6'
+        };
+        
+        const statusLabels = {
+            draft: 'Brouillon',
+            validated: 'Validé',
+            paid: 'Payé'
+        };
+        
+        // Vérifier la structure des données
+        const grossSalary = payslip.gross_salary || 0;
+        const netSalary = payslip.net_salary || 0;
+        const deductions = payslip.deductions || {};
+        const days = payslip.days || {};
+        
+        return `
+            <div class="payslip-mini-card" onclick="viewPayslipDetails(${payslip.id})">
+                <div class="payslip-mini-header">
+                    <div class="payslip-period">
+                        ${monthNames[payslip.month - 1]} ${payslip.year}
+                    </div>
+                    <span class="status-badge" style="background: ${statusColors[payslip.status]}; color: white;">
+                        ${statusLabels[payslip.status]}
+                    </span>
+                </div>
+                
+                <div class="payslip-mini-body">
+                    <div>
+                        <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 0.25rem;">
+                            Salaire Net
+                        </div>
+                        <div class="payslip-amount">${Number(netSalary).toFixed(3)} TND</div>
+                    </div>
+                    
+                    <div class="payslip-detail-row">
+                        <span style="color: var(--text-secondary);">Salaire Brut</span>
+                        <strong>${Number(grossSalary).toFixed(3)} TND</strong>
+                    </div>
+                    
+                    <div class="payslip-detail-row">
+                        <span style="color: var(--text-secondary);">Déductions</span>
+                        <strong style="color: #ef4444;">-${Number(deductions.total || 0).toFixed(3)} TND</strong>
+                    </div>
+                    
+                    <div class="payslip-detail-row">
+                        <span style="color: var(--text-secondary);">Jours travaillés</span>
+                        <strong>${days.worked || 0} / ${days.working || 0}</strong>
+                    </div>
+                </div>
+                
+                <div class="payslip-actions" onclick="event.stopPropagation()">
+                    <button class="btn btn-sm btn-secondary" onclick="viewPayslipDetails(${payslip.id})" style="flex: 1;">
+                        <i class="fas fa-eye"></i> Voir
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="downloadPayslipPDF(${payslip.id})" style="flex: 1;">
+                        <i class="fas fa-download"></i> PDF
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Voir les détails d'une fiche de paie
+async function viewPayslipDetails(payslipId) {
+    try {
+        const response = await fetch(`/payroll/payslip/${payslipId}`);
+        const data = await response.json();
+        
+        if (data.success && data.payslip) {
+            currentPayslipId = payslipId;
+            displayPayslipFullDetails(data.payslip);
+            document.getElementById('payslipPreviewModal').classList.add('active');
+        } else {
+            showNotification('Erreur lors du chargement', 'error');
+        }
+    } catch (error) {
+        console.error('Erreur:', error);
+        showNotification('Erreur de connexion', 'error');
+    }
+}
+
+// Afficher les détails complets
+function displayPayslipFullDetails(payslip) {
+    const monthNames = [
+        'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+        'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    ];
+    
+    document.getElementById('payslipPreviewTitle').textContent = 
+        `Fiche de Paie - ${monthNames[payslip.month - 1]} ${payslip.year}`;
+    
+    // Adapter aux noms exacts retournés par le backend
+    const allowances = payslip.allowances || {};
+    const deductions = payslip.deductions || {};
+    const days = payslip.days || {};
+    
+    // Récupérer le nom du validateur depuis validated_by (pas validated_by_user)
+    const validatedByName = payslip.validated_by || null;
+    const validatedAt = payslip.validated_at || null;
+    
+    document.getElementById('payslipPreviewContent').innerHTML = `
+        <div class="payslip-preview">
+            <div class="payslip-preview-header">
+                <h2>BULLETIN DE SALAIRE</h2>
+                <p style="font-size: 1.25rem; margin-top: 0.5rem;">
+                    ${monthNames[payslip.month - 1]} ${payslip.year}
+                </p>
+                <p style="opacity: 0.9; margin-top: 0.5rem;">
+                    ${payslip.user_name || ''}
+                </p>
+            </div>
+            
+            <!-- Rémunération -->
+            <div class="payslip-section">
+                <h3 style="color: var(--primary-color); margin-bottom: 1rem;">
+                    <i class="fas fa-wallet"></i> Rémunération
+                </h3>
+                <table class="payslip-table">
+                    <tr>
+                        <td>Salaire de Base</td>
+                        <td style="text-align: right;">${Number(payslip.base_salary || 0).toFixed(3)} TND</td>
+                    </tr>
+                    <tr>
+                        <td>Prime Transport</td>
+                        <td style="text-align: right;">${Number(allowances.transport || 0).toFixed(3)} TND</td>
+                    </tr>
+                    <tr>
+                        <td>Prime Panier</td>
+                        <td style="text-align: right;">${Number(allowances.food || 0).toFixed(3)} TND</td>
+                    </tr>
+                    <tr>
+                        <td>Prime Logement</td>
+                        <td style="text-align: right;">${Number(allowances.housing || 0).toFixed(3)} TND</td>
+                    </tr>
+                    <tr>
+                        <td>Prime Responsabilité</td>
+                        <td style="text-align: right;">${Number(allowances.responsibility || 0).toFixed(3)} TND</td>
+                    </tr>
+                    ${Number(allowances.performance || 0) > 0 ? `
+                        <tr>
+                            <td>Prime de Performance</td>
+                            <td style="text-align: right;">${Number(allowances.performance).toFixed(3)} TND</td>
+                        </tr>
+                    ` : ''}
+                    <tr class="payslip-total">
+                        <td>SALAIRE BRUT</td>
+                        <td style="text-align: right;">${Number(payslip.gross_salary || 0).toFixed(3)} TND</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Déductions -->
+            <div class="payslip-section">
+                <h3 style="color: #ef4444; margin-bottom: 1rem;">
+                    <i class="fas fa-minus-circle"></i> Déductions
+                </h3>
+                <table class="payslip-table">
+                    ${Number(deductions.leave || 0) > 0 ? `
+                        <tr>
+                            <td>Congés non payés</td>
+                            <td style="text-align: right; color: #ef4444;">-${Number(deductions.leave).toFixed(3)} TND</td>
+                        </tr>
+                    ` : ''}
+                    ${Number(deductions.absence || 0) > 0 ? `
+                        <tr>
+                            <td>Absences</td>
+                            <td style="text-align: right; color: #ef4444;">-${Number(deductions.absence).toFixed(3)} TND</td>
+                        </tr>
+                    ` : ''}
+                    ${Number(deductions.advance || 0) > 0 ? `
+                        <tr>
+                            <td>Avances sur salaire</td>
+                            <td style="text-align: right; color: #ef4444;">-${Number(deductions.advance).toFixed(3)} TND</td>
+                        </tr>
+                    ` : ''}
+                    <tr>
+                        <td>CNSS Employé (9.18%)</td>
+                        <td style="text-align: right; color: #ef4444;">-${Number(deductions.cnss || 0).toFixed(3)} TND</td>
+                    </tr>
+                    <tr>
+                        <td>IRPP</td>
+                        <td style="text-align: right; color: #ef4444;">-${Number(deductions.irpp || 0).toFixed(3)} TND</td>
+                    </tr>
+                    <tr class="payslip-total">
+                        <td>TOTAL DÉDUCTIONS</td>
+                        <td style="text-align: right; color: #ef4444;">-${Number(deductions.total || 0).toFixed(3)} TND</td>
+                    </tr>
+                </table>
+            </div>
+            
+            <!-- Salaire Net -->
+            <div class="payslip-net-total">
+                <div style="font-size: 1rem; opacity: 0.9; margin-bottom: 0.5rem;">
+                    SALAIRE NET À PAYER
+                </div>
+                <div class="payslip-net-value">
+                    ${Number(payslip.net_salary || 0).toFixed(3)} TND
+                </div>
+            </div>
+            
+            <!-- Informations complémentaires -->
+            <div class="payslip-section">
+                <h3 style="color: var(--text-secondary); margin-bottom: 1rem;">
+                    <i class="fas fa-info-circle"></i> Informations
+                </h3>
+                <div style="background: var(--bg-tertiary); padding: 1rem; border-radius: 8px;">
+                    <div class="payslip-detail-row">
+                        <span>Jours ouvrables</span>
+                        <strong>${days.working || 0} jours</strong>
+                    </div>
+                    <div class="payslip-detail-row">
+                        <span>Jours travaillés</span>
+                        <strong>${days.worked || 0} jours</strong>
+                    </div>
+                    ${(days.leave || 0) > 0 ? `
+                        <div class="payslip-detail-row">
+                            <span>Jours de congé</span>
+                            <strong>${days.leave} jour(s)</strong>
+                        </div>
+                    ` : ''}
+                    ${(days.absence || 0) > 0 ? `
+                        <div class="payslip-detail-row">
+                            <span>Jours d'absence</span>
+                            <strong>${days.absence} jour(s)</strong>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                ${validatedAt ? `
+                    <div style="margin-top: 1rem; padding: 1rem; background: #d1fae5; border-radius: 8px; color: #065f46;">
+                        <i class="fas fa-check-circle"></i>
+                        Validé${validatedByName ? ` par ${validatedByName}` : ''} le ${new Date(validatedAt).toLocaleDateString('fr-FR')}
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+// Télécharger le PDF
+function downloadPayslipPDF(payslipId) {
+    window.open(`/payroll/payslip/${payslipId}/pdf`, '_blank');
+}
+
+// Télécharger le PDF de la fiche en cours de visualisation
+function downloadCurrentPayslipPDF() {
+    if (currentPayslipId) {
+        downloadPayslipPDF(currentPayslipId);
+    }
+}
+
+// Fermer la preview
+function closePayslipPreview() {
+    document.getElementById('payslipPreviewModal').classList.remove('active');
+    currentPayslipId = null;
+}
+
+// Fermer modal sur backdrop
+document.getElementById('payslipPreviewModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closePayslipPreview();
+    }
+});
+
+// Initialisation au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser le filtre année pour les fiches de paie
+    if (document.getElementById('payslipYearFilter')) {
+        initializePayslipYearFilter();
+    }
+    
+    // Charger les fiches si on arrive directement sur cette section
+    if (window.location.hash === '#payslips') {
+        switchSection({preventDefault: () => {}}, 'payslips');
+    }
+});
+
+// Fermer avec ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeEditInfoModal();
+        closeRequestModal();
+        closePayslipPreview();
+    }
+});
 // Variables globales
 let currentSection = 'info';
 
@@ -1397,4 +2001,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+
 {% endblock %}

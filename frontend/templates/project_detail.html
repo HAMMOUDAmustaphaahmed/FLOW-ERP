@@ -1,0 +1,606 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - FlowERP{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tickets.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+    .project-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px 20px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+    }
+    
+    .project-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .stat-box {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .stat-box h3 {
+        font-size: 1.5rem;
+        margin: 0;
+    }
+    
+    .nav-tabs-custom {
+        border-bottom: 2px solid #e2e8f0;
+        margin-bottom: 20px;
+    }
+    
+    .nav-tabs-custom .nav-link {
+        border: none;
+        padding: 12px 20px;
+        color: #64748b;
+        font-weight: 600;
+        border-bottom: 3px solid transparent;
+    }
+    
+    .nav-tabs-custom .nav-link.active {
+        color: #667eea;
+        border-bottom-color: #667eea;
+        background: none;
+    }
+    
+    .tab-content {
+        min-height: 400px;
+    }
+    
+    .task-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        transition: all 0.2s;
+    }
+    
+    .task-item:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .priority-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .priority-critical { background: #dc3545; color: white; }
+    .priority-high { background: #fd7e14; color: white; }
+    .priority-normal { background: #0d6efd; color: white; }
+    .priority-low { background: #6c757d; color: white; }
+    
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+    }
+    
+    .status-todo { background: #e7f3ff; color: #0d6efd; }
+    .status-in_progress { background: #fff3cd; color: #856404; }
+    .status-in_review { background: #d1ecf1; color: #0c5460; }
+    .status-completed { background: #d1f2eb; color: #198754; }
+    
+    .member-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #667eea;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+    }
+    
+    .progress-bar-custom {
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        transition: width 0.3s;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- En-tête du projet -->
+    <div class="project-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h1>{{ project.name }}</h1>
+                <p class="mb-0">{{ project.description }}</p>
+            </div>
+            <div class="text-end">
+                <span class="priority-badge priority-{{ project.priority }}">
+                    {{ project.priority|title }}
+                </span>
+                <span class="status-badge status-{{ project.status }}">
+                    {{ project.status|title }}
+                </span>
+            </div>
+        </div>
+        
+        <div class="project-stats">
+            <div class="stat-box">
+                <h3 id="taskCount">0</h3>
+                <p class="mb-0">Tâches</p>
+            </div>
+            <div class="stat-box">
+                <h3>{{ project.progress_percentage }}%</h3>
+                <p class="mb-0">Progression</p>
+            </div>
+            <div class="stat-box">
+                <h3 id="memberCount">0</h3>
+                <p class="mb-0">Membres</p>
+            </div>
+            <div class="stat-box">
+                <h3>{{ project.estimated_hours or 0 }}</h3>
+                <p class="mb-0">Heures estimées</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Navigation par onglets -->
+    <ul class="nav nav-tabs nav-tabs-custom" id="projectTabs">
+        <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#overview">
+                <i class="fas fa-chart-pie"></i> Vue d'ensemble
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#tasks">
+                <i class="fas fa-tasks"></i> Tâches
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#team">
+                <i class="fas fa-users"></i> Équipe
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#milestones">
+                <i class="fas fa-flag-checkered"></i> Jalons
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#settings">
+                <i class="fas fa-cog"></i> Paramètres
+            </a>
+        </li>
+    </ul>
+    
+    <!-- Contenu des onglets -->
+    <div class="tab-content" id="projectTabsContent">
+        <!-- Onglet Vue d'ensemble -->
+        <div class="tab-pane fade show active" id="overview">
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Progression du projet</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="progress-bar-custom mb-3">
+                                <div class="progress-fill" style="width: {{ project.progress_percentage }}%"></div>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>{{ project.progress_percentage }}% complété</span>
+                                <span id="completedTasks">0 tâches terminées</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Prochaines échéances</h5>
+                        </div>
+                        <div class="card-body" id="upcomingTasks">
+                            <!-- Chargé dynamiquement -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Informations</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Chef de projet:</strong><br>
+                                {{ project.project_manager.get_full_name() if project.project_manager else 'Non assigné' }}</p>
+                            
+                            <p><strong>Département:</strong><br>
+                                {{ project.department.name if project.department else 'Aucun' }}</p>
+                            
+                            <p><strong>Date de début:</strong><br>
+                                {{ project.start_date.strftime('%d/%m/%Y') if project.start_date else 'Non définie' }}</p>
+                            
+                            <p><strong>Date de fin:</strong><br>
+                                {{ project.end_date.strftime('%d/%m/%Y') if project.end_date else 'Non définie' }}</p>
+                            
+                            <p><strong>Budget:</strong><br>
+                                {{ "%.2f €"|format(project.total_budget) if project.total_budget else 'Non défini' }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Onglet Tâches -->
+        <div class="tab-pane fade" id="tasks">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4>Gestion des tâches</h4>
+                <button class="btn btn-primary" onclick="openTaskModal()">
+                    <i class="fas fa-plus"></i> Nouvelle tâche
+                </button>
+            </div>
+            
+            <div id="tasksContainer">
+                <!-- Chargé dynamiquement -->
+            </div>
+        </div>
+        
+        <!-- Onglet Équipe -->
+        <div class="tab-pane fade" id="team">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4>Membres de l'équipe</h4>
+                <button class="btn btn-primary" onclick="openMemberModal()">
+                    <i class="fas fa-user-plus"></i> Ajouter un membre
+                </button>
+            </div>
+            
+            <div class="row" id="teamMembers">
+                <!-- Chargé dynamiquement -->
+            </div>
+        </div>
+        
+        <!-- Onglet Jalons -->
+        <div class="tab-pane fade" id="milestones">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4>Jalons du projet</h4>
+                <button class="btn btn-primary" onclick="openMilestoneModal()">
+                    <i class="fas fa-flag"></i> Nouveau jalon
+                </button>
+            </div>
+            
+            <div id="milestonesContainer">
+                <!-- Chargé dynamiquement -->
+            </div>
+        </div>
+        
+        <!-- Onglet Paramètres -->
+        <div class="tab-pane fade" id="settings">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Paramètres du projet</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="projectSettingsForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Statut</label>
+                                    <select class="form-select" name="status">
+                                        <option value="planned" {{ 'selected' if project.status == 'planned' }}>Planifié</option>
+                                        <option value="active" {{ 'selected' if project.status == 'active' }}>Actif</option>
+                                        <option value="completed" {{ 'selected' if project.status == 'completed' }}>Terminé</option>
+                                        <option value="suspended" {{ 'selected' if project.status == 'suspended' }}>Suspendu</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Priorité</label>
+                                    <select class="form-select" name="priority">
+                                        <option value="low" {{ 'selected' if project.priority == 'low' }}>Basse</option>
+                                        <option value="normal" {{ 'selected' if project.priority == 'normal' }}>Normale</option>
+                                        <option value="high" {{ 'selected' if project.priority == 'high' }}>Haute</option>
+                                        <option value="critical" {{ 'selected' if project.priority == 'critical' }}>Critique</option>
+                                    </select>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour créer/modifier une tâche -->
+<div class="modal fade" id="taskModal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nouvelle Tâche</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="taskForm">
+                    <div class="mb-3">
+                        <label class="form-label">Titre *</label>
+                        <input type="text" class="form-control" name="title" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Assigner à</label>
+                                <select class="form-select" name="assigned_to_id">
+                                    <option value="">Non assigné</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Priorité</label>
+                                <select class="form-select" name="priority">
+                                    <option value="P3">Normale</option>
+                                    <option value="P1">Critique</option>
+                                    <option value="P2">Haute</option>
+                                    <option value="P4">Basse</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Date d'échéance</label>
+                                <input type="date" class="form-control" name="due_date">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Heures estimées</label>
+                                <input type="number" class="form-control" name="estimated_hours">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="saveTask()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const projectId = {{ project.id }};
+    let taskModal = null;
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+        loadProjectData();
+        loadTeamMembers();
+    });
+    
+    async function loadProjectData() {
+        try {
+            const response = await fetch(`/projects/api/${projectId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                updateStats(data.project);
+                loadTasks(data.project.tasks || []);
+                loadTeam(data.project.members || []);
+                loadMilestones(data.project.milestones || []);
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }
+    
+    function updateStats(project) {
+        document.getElementById('taskCount').textContent = project.task_count || 0;
+        document.getElementById('memberCount').textContent = project.member_count || 0;
+        
+        const completedTasks = project.tasks ? project.tasks.filter(t => t.status === 'completed').length : 0;
+        document.getElementById('completedTasks').textContent = `${completedTasks} tâches terminées`;
+    }
+    
+    function loadTasks(tasks) {
+        const container = document.getElementById('tasksContainer');
+        
+        if (tasks.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-tasks fa-3x mb-3"></i>
+                    <p>Aucune tâche créée</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = tasks.map(task => `
+            <div class="task-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">${task.title}</h6>
+                        <p class="text-muted mb-2">${task.description || 'Aucune description'}</p>
+                        
+                        <div class="d-flex gap-3 align-items-center">
+                            <span class="status-badge status-${task.status}">
+                                ${getStatusLabel(task.status)}
+                            </span>
+                            <span class="priority-badge priority-${task.priority}">
+                                ${task.priority}
+                            </span>
+                            ${task.assigned_to ? `
+                                <span><i class="fas fa-user"></i> ${task.assigned_to.name}</span>
+                            ` : ''}
+                            ${task.due_date ? `
+                                <span><i class="fas fa-calendar"></i> ${new Date(task.due_date).toLocaleDateString('fr-FR')}</span>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div class="progress-bar-custom" style="width: 100px;">
+                        <div class="progress-fill" style="width: ${task.progress_percentage || 0}%"></div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function loadTeam(members) {
+        const container = document.getElementById('teamMembers');
+        
+        if (members.length === 0) {
+            container.innerHTML = `
+                <div class="col-12 text-center py-5 text-muted">
+                    <i class="fas fa-users fa-3x mb-3"></i>
+                    <p>Aucun membre dans l'équipe</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = members.map(member => `
+            <div class="col-md-4 mb-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="member-avatar mx-auto mb-3">
+                            ${getInitials(member.name)}
+                        </div>
+                        <h6>${member.name}</h6>
+                        <p class="text-muted mb-1">${member.role || 'Membre'}</p>
+                        <small class="text-muted">${member.allocation}% allocation</small>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function loadMilestones(milestones) {
+        const container = document.getElementById('milestonesContainer');
+        
+        if (milestones.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-flag fa-3x mb-3"></i>
+                    <p>Aucun jalon défini</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = milestones.map(milestone => `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">${milestone.name}</h6>
+                            <p class="text-muted mb-0">${new Date(milestone.target_date).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                        <span class="status-badge status-${milestone.status}">
+                            ${milestone.status === 'reached' ? 'Atteint' : milestone.status === 'missed' ? 'Manqué' : 'En attente'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    async function loadTeamMembers() {
+        try {
+            const response = await fetch('/users/list');
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.getElementById('taskForm').querySelector('[name="assigned_to_id"]');
+                data.users.forEach(user => {
+                    select.add(new Option(user.full_name || user.username, user.id));
+                });
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }
+    
+    function openTaskModal() {
+        document.getElementById('taskForm').reset();
+        taskModal.show();
+    }
+    
+    async function saveTask() {
+        const form = document.getElementById('taskForm');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        
+        if (!data.title) {
+            alert('Le titre est requis');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/projects/api/${projectId}/tasks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                taskModal.hide();
+                loadProjectData(); // Recharger les données
+            } else {
+                alert('Erreur: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            alert('Erreur de connexion');
+        }
+    }
+    
+    function getStatusLabel(status) {
+        const labels = {
+            'todo': 'À faire',
+            'in_progress': 'En cours',
+            'in_review': 'En revue',
+            'completed': 'Terminé',
+            'blocked': 'Bloqué'
+        };
+        return labels[status] || status;
+    }
+    
+    function getInitials(name) {
+        if (!name) return '?';
+        return name.split(' ')
+            .map(n => n[0])
+            .join('')
+            .toUpperCase()
+            .substring(0, 2);
+    }
+</script>
+{% endblock %}

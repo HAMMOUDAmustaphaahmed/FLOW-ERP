@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+
+{% block title %}Tickets - FlowERP{% endblock %}
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tickets.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+{% endblock %}
+{% block content %}
+
+<div class="container-fluid py-4">
+    <!-- En-tête avec boutons d'action -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1">Système de Tickets</h1>
+            <p class="text-muted">Signalez et suivez les problèmes techniques</p>
+        </div>
+        <button class="btn btn-primary" id="newTicketBtn">
+            <i class="fas fa-plus me-2"></i>Nouveau Ticket
+        </button>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-stats">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="icon icon-shape bg-primary text-white rounded-circle shadow">
+                                <i class="fas fa-ticket-alt"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="card-title text-uppercase text-muted mb-0">Total Tickets</h5>
+                            <span class="h2 font-weight-bold mb-0" id="totalTickets">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-stats">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="icon icon-shape bg-warning text-white rounded-circle shadow">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="card-title text-uppercase text-muted mb-0">En Attente</h5>
+                            <span class="h2 font-weight-bold mb-0" id="pendingTickets">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-stats">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="icon icon-shape bg-danger text-white rounded-circle shadow">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="card-title text-uppercase text-muted mb-0">En Retard</h5>
+                            <span class="h2 font-weight-bold mb-0" id="overdueTickets">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-stats">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="icon icon-shape bg-success text-white rounded-circle shadow">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="card-title text-uppercase text-muted mb-0">Résolus</h5>
+                            <span class="h2 font-weight-bold mb-0" id="resolvedTickets">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres et recherche -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Statut</label>
+                    <select class="form-select" id="statusFilter">
+                        <option value="">Tous les statuts</option>
+                        <option value="en_attente">En attente</option>
+                        <option value="en_cours">En cours</option>
+                        <option value="resolu">Résolu</option>
+                        <option value="ferme">Fermé</option>
+                        <option value="reouvert">Réouvert</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Priorité</label>
+                    <select class="form-select" id="priorityFilter">
+                        <option value="">Toutes les priorités</option>
+                        <option value="urgente">Urgente</option>
+                        <option value="critique">Critique</option>
+                        <option value="haute">Haute</option>
+                        <option value="normale">Normale</option>
+                        <option value="basse">Basse</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Catégorie</label>
+                    <select class="form-select" id="categoryFilter">
+                        <option value="">Toutes les catégories</option>
+                        <option value="production">Production</option>
+                        <option value="quality_control">Contrôle Qualité</option>
+                        <option value="warehouse">Magasin</option>
+                        <option value="it_support">IT/Informatique</option>
+                        <option value="hr">RH</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="security">Sécurité</option>
+                        <option value="other">Autre</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+    <label class="form-label">Type de vue</label>
+    <select class="form-select" id="viewType">
+        {% if current_user and current_user.is_admin %}
+            <option value="all" selected>Tous les tickets</option>
+            <option value="my_tickets">Mes Tickets</option>
+            <option value="assigned_to_me">Assignés à moi</option>
+        {% else %}
+            <option value="my_tickets" selected>Mes Tickets</option>
+            <option value="assigned_to_me">Assignés à moi</option>
+            <option value="all">Tous les tickets</option>
+        {% endif %}
+    </select>
+</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des tickets -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Liste des Tickets</h5>
+        </div>
+        <div class="card-body">
+            <div id="ticketsList" class="table-responsive">
+                <!-- Les tickets seront chargés ici dynamiquement -->
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Chargement des tickets...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de création de ticket -->
+<div class="modal fade" id="createTicketModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nouveau Ticket</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createTicketForm">
+                    <div class="mb-3">
+                        <label class="form-label">Titre du problème *</label>
+                        <input type="text" class="form-control" id="ticketTitle" required 
+                               placeholder="Décrivez brièvement le problème...">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Description détaillée *</label>
+                        <textarea class="form-control" id="ticketDescription" rows="4" required
+                                  placeholder="Décrivez le problème en détail, les étapes pour le reproduire, l'impact..."></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Catégorie *</label>
+                                <select class="form-select" id="ticketCategory" required>
+                                    <option value="">Choisir une catégorie</option>
+                                    <option value="production">Production</option>
+                                    <option value="quality_control">Contrôle Qualité</option>
+                                    <option value="warehouse">Magasin</option>
+                                    <option value="it_support">IT/Informatique</option>
+                                    <option value="hr">RH</option>
+                                    <option value="maintenance">Maintenance</option>
+                                    <option value="security">Sécurité</option>
+                                    <option value="other">Autre</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Département Concerné  *</label>
+                                <select class="form-select" id="ticketDepartment" required>
+                                    <option value="">Choisir un département</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Priorité *</label>
+                                <select class="form-select" id="ticketPriority" required>
+                                    <option value="normale">Normale</option>
+                                    <option value="basse">Basse</option>
+                                    <option value="haute">Haute</option>
+                                    <option value="critique">Critique</option>
+                                    <option value="urgente">Urgente</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Localisation</label>
+                                <input type="text" class="form-control" id="ticketLocation" 
+                                       placeholder="Ex: Atelier A, Bureau 203...">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Équipement concerné</label>
+                                <input type="text" class="form-control" id="ticketEquipment" 
+                                       placeholder="Ex: Machine CNC-001, PC-123...">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Tags</label>
+                        <input type="text" class="form-control" id="ticketTags" 
+                               placeholder="Séparés par des virgules (ex: urgent, machine, électrique)">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="createTicketBtn">
+                    <i class="fas fa-plus me-2"></i>Créer le Ticket
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de détail du ticket -->
+<div class="modal fade" id="ticketDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ticketDetailTitle">Détail du Ticket</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="ticketDetailContent">
+                    <!-- Contenu chargé dynamiquement -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/tickets.js') }}"></script>
+
+{% endblock %}

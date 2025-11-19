@@ -1,6 +1,6 @@
-# routes/payroll.py
-"""Routes pour la gestion de la paie - Version corrigée"""
-from flask import Blueprint, request, jsonify, session, render_template, send_file
+# routes/payroll.py - VERSION COMPLÈTE
+"""Routes pour la gestion de la paie - Version complète et améliorée"""
+from flask import Blueprint, request, jsonify, session, render_template, send_file, current_app
 from database import db
 from models.user import User
 from models.payroll import (
@@ -8,13 +8,12 @@ from models.payroll import (
     Attendance, Payslip
 )
 from models.company import Company
+from models.employee_request import EmployeeRequest
 from utils.security import require_login, require_admin, AuditLogger
 from datetime import datetime, date, timedelta
-from sqlalchemy import and_, extract
+from sqlalchemy import and_, extract, or_
 from decimal import Decimal
 import calendar
-from models.employee_request import EmployeeRequest
-from sqlalchemy import extract, or_
 
 payroll_bp = Blueprint('payroll', __name__, url_prefix='/payroll')
 
@@ -37,7 +36,7 @@ def my_payslips_page():
     return render_template('my_payslips.html', user=current_user)
 
 
-# ==================== CONFIGURATION ====================
+# ==================== API ENDPOINTS ====================
 
 @payroll_bp.route('/config', methods=['GET'])
 @require_login
@@ -71,6 +70,16 @@ def get_config():
             )
             db.session.add(config)
             db.session.commit()
+            
+            # Logger dans blockchain
+            blockchain = current_app.extensions.get('blockchain')
+            if blockchain:
+                blockchain.add_transaction({
+                    'type': 'payroll_config_created',
+                    'company_id': user.company_id,
+                    'config_id': config.id,
+                    'timestamp': datetime.utcnow().isoformat()
+                })
         
         return jsonify({'success': True, 'config': config.to_dict()}), 200
         
@@ -81,200 +90,6 @@ def get_config():
             'error': f'Erreur serveur: {str(e)}'
         }), 500
 
-@payroll_bp.route('/approved-leave-requests', methods=['GET'])
-@require_login
-def get_approved_leave_requests():
-    """
-    🆕 Récupérer TOUTES les demandes de congés APPROUVÉES
-    (visibles dans l'onglet Congés de Manage Payroll)
-    """
-    from models.employee_request import EmployeeRequest
-    from sqlalchemy import extract, or_
-    
-    current_user = User.query.get(session['user_id'])
-    
-    # Vérifier les permissions
-    if not (current_user.is_admin or current_user.can_access_payroll):
-        return jsonify({
-            'success': False,
-            'error': 'Accès refusé'
-        }), 403
-    
-    # Filtres
-    status = request.args.get('status', 'approved')  # Par défaut: approuvées
-    leave_type = request.args.get('leave_type')
-    month = request.args.get('month', type=int)
-    year = request.args.get('year', type=int)
-    search = request.args.get('search', '').strip()
-    
-    # Query de base : uniquement les demandes de type 'leave'
-    query = EmployeeRequest.query.filter_by(type='leave')
-    
-    # Filtre statut
-    if status:
-        query = query.filter_by(status=status)
-    
-    # Filtre type de congé
-    if leave_type:
-        query = query.filter_by(leave_type=leave_type)
-    
-    # Filtre par date
-    if month and year:
-        query = query.filter(
-            or_(
-                extract('month', EmployeeRequest.start_date) == month,
-                extract('month', EmployeeRequest.end_date) == month
-            ),
-            or_(
-                extract('year', EmployeeRequest.start_date) == year,
-                extract('year', EmployeeRequest.end_date) == year
-            )
-        )
-    elif year:
-        query = query.filter(
-            or_(
-                extract('year', EmployeeRequest.start_date) == year,
-                extract('year', EmployeeRequest.end_date) == year
-            )
-        )
-    
-    # Recherche textuelle
-    if search:
-        query = query.join(User).filter(
-            or_(
-                User.first_name.ilike(f'%{search}%'),
-                User.last_name.ilike(f'%{search}%'),
-                User.email.ilike(f'%{search}%'),
-                User.username.ilike(f'%{search}%')
-            )
-        )
-    
-    requests = query.order_by(EmployeeRequest.created_at.desc()).all()
-    
-    return jsonify({
-        'success': True,
-        'leave_requests': [req.to_dict() for req in requests]
-    }), 200
-
-
-@payroll_bp.route('/approved-advances', methods=['GET'])
-@require_login
-def get_approved_advances():
-    """
-    🆕 Récupérer TOUTES les demandes d'avances APPROUVÉES
-    (visibles dans l'onglet Avances de Manage Payroll)
-    """
-    from models.employee_request import EmployeeRequest
-    from sqlalchemy import extract, or_
-    
-    current_user = User.query.get(session['user_id'])
-    
-    # Vérifier les permissions
-    if not (current_user.is_admin or current_user.can_access_payroll):
-        return jsonify({
-            'success': False,
-            'error': 'Accès refusé'
-        }), 403
-    
-    # Filtres
-    status = request.args.get('status', 'approved')  # Par défaut: approuvées
-    month = request.args.get('month', type=int)
-    year = request.args.get('year', type=int)
-    search = request.args.get('search', '').strip()
-    
-    # Query de base : uniquement les demandes de type 'loan'
-    query = EmployeeRequest.query.filter_by(type='loan')
-    
-    # Filtre statut
-    if status:
-        query = query.filter_by(status=status)
-    
-    # Filtre par date
-    if month and year:
-        query = query.filter(
-            extract('month', EmployeeRequest.created_at) == month,
-            extract('year', EmployeeRequest.created_at) == year
-        )
-    elif year:
-        query = query.filter(
-            extract('year', EmployeeRequest.created_at) == year
-        )
-    
-    # Recherche textuelle
-    if search:
-        query = query.join(User).filter(
-            or_(
-                User.first_name.ilike(f'%{search}%'),
-                User.last_name.ilike(f'%{search}%'),
-                User.email.ilike(f'%{search}%'),
-                User.username.ilike(f'%{search}%')
-            )
-        )
-    
-    requests = query.order_by(EmployeeRequest.created_at.desc()).all()
-    
-    # Transformer en format compatible avec l'ancien système d'avances
-    advances = []
-    for req in requests:
-        advances.append({
-            'id': req.id,
-            'user_id': req.user_id,
-            'user_name': req.user.get_full_name(),
-            'amount': float(req.amount) if req.amount else 0,
-            'loan_type': req.loan_type,
-            'reason': req.reason,
-            'status': req.status,
-            'approved_by': req.approved_by.get_full_name() if req.approved_by else None,
-            'approved_at': req.approved_at.isoformat() if req.approved_at else None,
-            'request_date': req.created_at.isoformat(),
-            'blockchain_hash': req.blockchain_hash,
-            'is_in_blockchain': req.is_in_blockchain,
-            # Champs pour compatibilité
-            'repayment_months': 1,  # Par défaut
-            'monthly_deduction': float(req.amount) if req.amount else 0,
-            'remaining_amount': float(req.amount) if req.amount and req.status == 'approved' else 0,
-            'disbursement_date': req.approved_at.date().isoformat() if req.approved_at else None
-        })
-    
-    return jsonify({
-        'success': True,
-        'advances': advances
-    }), 200
-
-
-@payroll_bp.route('/blockchain/request-history/<int:request_id>', methods=['GET'])
-@require_login
-def get_request_blockchain_history(request_id):
-    """
-    🆕 Récupérer l'historique blockchain d'une demande spécifique
-    """
-    from models.employee_request import EmployeeRequest
-    
-    employee_request = EmployeeRequest.query.get_or_404(request_id)
-    
-    # Vérifier les permissions
-    current_user = User.query.get(session['user_id'])
-    if not (current_user.is_admin or 
-            current_user.can_access_payroll or 
-            employee_request.user_id == current_user.id):
-        return jsonify({'error': 'Accès refusé'}), 403
-    
-    blockchain = current_app.extensions.get('blockchain')
-    if not blockchain:
-        return jsonify({'error': 'Blockchain non disponible'}), 500
-    
-    # Récupérer l'historique
-    history = blockchain.get_transaction_history('employee_request', str(request_id))
-    
-    return jsonify({
-        'success': True,
-        'request_id': request_id,
-        'blockchain_hash': employee_request.blockchain_hash,
-        'block_index': employee_request.blockchain_block_index,
-        'is_in_blockchain': employee_request.is_in_blockchain,
-        'history': history,
-        'chain_valid': blockchain.is_chain_valid()
-    }), 200
 
 @payroll_bp.route('/config', methods=['POST', 'PUT'])
 @require_admin
@@ -327,6 +142,25 @@ def update_config():
         
         config.updated_at = datetime.utcnow()
         db.session.commit()
+        
+        # Logger dans blockchain
+        blockchain = current_app.extensions.get('blockchain')
+        if blockchain:
+            blockchain.add_transaction({
+                'type': 'payroll_config_updated',
+                'company_id': user.company_id,
+                'config_id': config.id,
+                'updated_by': user.id,
+                'timestamp': datetime.utcnow().isoformat()
+            })
+        
+        AuditLogger.log_action(
+            session['user_id'],
+            'config_updated',
+            'salary_config',
+            config.id,
+            {'company_id': user.company_id}
+        )
         
         return jsonify({
             'success': True,
@@ -426,6 +260,18 @@ def update_employee_salary(user_id):
         salary.updated_at = datetime.utcnow()
         db.session.commit()
         
+        # Logger dans blockchain
+        blockchain = current_app.extensions.get('blockchain')
+        if blockchain:
+            blockchain.add_transaction({
+                'type': 'salary_updated',
+                'user_id': user_id,
+                'salary_id': salary.id,
+                'base_salary': float(salary.base_salary),
+                'updated_by': session['user_id'],
+                'timestamp': datetime.utcnow().isoformat()
+            })
+        
         AuditLogger.log_action(
             session['user_id'],
             'salary_updated',
@@ -451,51 +297,11 @@ def update_employee_salary(user_id):
 
 # ==================== DEMANDES DE CONGÉS ====================
 
-@payroll_bp.route('/leave-request', methods=['POST'])
-@require_login
-def create_leave_request():
-    """Créer une demande de congé"""
-    user_id = session['user_id']
-    data = request.get_json()
-    
-    try:
-        start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
-        end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
-        days_count = (end_date - start_date).days + 1
-        
-        leave_request = LeaveRequest(
-            user_id=user_id,
-            leave_type=data['leave_type'],
-            start_date=start_date,
-            end_date=end_date,
-            days_count=days_count,
-            reason=data.get('reason', ''),
-            is_paid=data.get('is_paid', True)
-        )
-        
-        db.session.add(leave_request)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Demande de congé créée',
-            'leave_request': leave_request.to_dict()
-        }), 201
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
 @payroll_bp.route('/leave-requests', methods=['GET'])
 @require_login
 def get_leave_requests():
-    """
-    🆕 Récupérer les demandes de congés depuis employee_requests
-    Compatible avec l'ancien système pour l'interface payroll
-    """
+    """Récupérer les demandes de congés depuis employee_requests"""
     from models.employee_request import EmployeeRequest
-    from sqlalchemy import extract, or_
     
     current_user = User.query.get(session['user_id'])
     
@@ -507,24 +313,21 @@ def get_leave_requests():
         }), 403
     
     # Filtres
-    status = request.args.get('status', 'approved')  # Par défaut: approuvées
+    status = request.args.get('status', 'approved')
     leave_type = request.args.get('leave_type')
     month = request.args.get('month', type=int)
     year = request.args.get('year', type=int)
     search = request.args.get('search', '').strip()
     
-    # Query de base : uniquement les demandes de type 'leave'
+    # Query de base
     query = EmployeeRequest.query.filter_by(type='leave')
     
-    # Filtre statut
     if status:
         query = query.filter_by(status=status)
     
-    # Filtre type de congé
     if leave_type:
         query = query.filter_by(leave_type=leave_type)
     
-    # Filtre par date
     if month and year:
         query = query.filter(
             or_(
@@ -544,7 +347,6 @@ def get_leave_requests():
             )
         )
     
-    # Recherche textuelle
     if search:
         query = query.join(User).filter(
             or_(
@@ -557,21 +359,20 @@ def get_leave_requests():
     
     requests = query.order_by(EmployeeRequest.created_at.desc()).all()
     
-    # Transformer en format compatible avec l'ancien système
     leave_requests = []
     for req in requests:
         leave_requests.append({
             'id': req.id,
             'user_id': req.user_id,
             'user_name': req.user.get_full_name(),
-            'leave_type': req.leave_type or 'annual',  # Défaut si non spécifié
+            'leave_type': req.leave_type or 'annual',
             'start_date': req.start_date.isoformat() if req.start_date else None,
             'end_date': req.end_date.isoformat() if req.end_date else None,
             'days_count': req.days or 0,
             'reason': req.reason,
             'status': req.status,
-            'is_paid': True,  # Par défaut
-            'deduction_amount': 0,  # À calculer si nécessaire
+            'is_paid': True,
+            'deduction_amount': 0,
             'reviewed_by': req.approved_by.get_full_name() if req.approved_by else None,
             'reviewed_at': req.approved_at.isoformat() if req.approved_at else None,
             'review_comment': req.admin_comment,
@@ -585,113 +386,33 @@ def get_leave_requests():
         'leave_requests': leave_requests
     }), 200
 
-@payroll_bp.route('/leave-request/<int:request_id>/review', methods=['POST'])
-@require_admin
-def review_leave_request(request_id):
-    """Approuver ou rejeter une demande de congé"""
-    data = request.get_json()
-    leave_request = LeaveRequest.query.get_or_404(request_id)
-    
-    try:
-        leave_request.status = data['status']
-        leave_request.review_comment = data.get('review_comment', '')
-        leave_request.reviewed_by_id = session['user_id']
-        leave_request.reviewed_at = datetime.utcnow()
-        
-        # Calculer déduction si non payé
-        if data['status'] == 'approved' and not leave_request.is_paid:
-            salary = EmployeeSalary.query.filter_by(
-                user_id=leave_request.user_id, 
-                is_active=True
-            ).first()
-            
-            if salary:
-                user = User.query.get(leave_request.user_id)
-                config = SalaryConfig.query.filter_by(company_id=user.company_id).first()
-                
-                if config:
-                    daily_rate = float(salary.base_salary) / config.working_days_per_month
-                    leave_request.deduction_amount = Decimal(str(daily_rate * leave_request.days_count))
-        
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Demande traitée',
-            'leave_request': leave_request.to_dict()
-        }), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
 
 # ==================== AVANCES SUR SALAIRE ====================
-
-@payroll_bp.route('/advance', methods=['POST'])
-@require_login
-def create_advance_request():
-    """Créer une demande d'avance"""
-    user_id = session['user_id']
-    data = request.get_json()
-    
-    try:
-        advance = SalaryAdvance(
-            user_id=user_id,
-            amount=Decimal(str(data['amount'])),
-            reason=data.get('reason', ''),
-            repayment_months=data.get('repayment_months', 1)
-        )
-        
-        advance.calculate_monthly_deduction()
-        
-        db.session.add(advance)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Demande d\'avance créée',
-            'advance': advance.to_dict()
-        }), 201
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
 
 @payroll_bp.route('/advances', methods=['GET'])
 @require_login
 def get_advances():
-    """
-    🆕 Récupérer les demandes d'avances depuis employee_requests
-    Compatible avec l'ancien système pour l'interface payroll
-    """
+    """Récupérer les demandes d'avances depuis employee_requests"""
     from models.employee_request import EmployeeRequest
-    from sqlalchemy import extract, or_
     
     current_user = User.query.get(session['user_id'])
     
-    # Vérifier les permissions
     if not (current_user.is_admin or current_user.can_access_payroll):
         return jsonify({
             'success': False,
             'error': 'Accès refusé'
         }), 403
     
-    # Filtres
-    status = request.args.get('status', 'approved')  # Par défaut: approuvées
+    status = request.args.get('status', 'approved')
     month = request.args.get('month', type=int)
     year = request.args.get('year', type=int)
     search = request.args.get('search', '').strip()
     
-    # Query de base : uniquement les demandes de type 'loan'
     query = EmployeeRequest.query.filter_by(type='loan')
     
-    # Filtre statut
     if status:
         query = query.filter_by(status=status)
     
-    # Filtre par date
     if month and year:
         query = query.filter(
             extract('month', EmployeeRequest.created_at) == month,
@@ -702,7 +423,6 @@ def get_advances():
             extract('year', EmployeeRequest.created_at) == year
         )
     
-    # Recherche textuelle
     if search:
         query = query.join(User).filter(
             or_(
@@ -715,7 +435,6 @@ def get_advances():
     
     requests = query.order_by(EmployeeRequest.created_at.desc()).all()
     
-    # Transformer en format compatible avec l'ancien système d'avances
     advances = []
     for req in requests:
         advances.append({
@@ -732,8 +451,7 @@ def get_advances():
             'request_date': req.created_at.isoformat(),
             'blockchain_hash': req.blockchain_hash,
             'is_in_blockchain': req.is_in_blockchain,
-            # Champs pour compatibilité avec l'ancien système
-            'repayment_months': 1,  # Par défaut
+            'repayment_months': 1,
             'monthly_deduction': float(req.amount) if req.amount else 0,
             'remaining_amount': float(req.amount) if req.amount and req.status == 'approved' else 0,
             'disbursement_date': req.approved_at.date().isoformat() if req.approved_at else None
@@ -743,36 +461,6 @@ def get_advances():
         'success': True,
         'advances': advances
     }), 200
-
-@payroll_bp.route('/advance/<int:advance_id>/review', methods=['POST'])
-@require_admin
-def review_advance(advance_id):
-    """Approuver ou rejeter une avance"""
-    data = request.get_json()
-    advance = SalaryAdvance.query.get_or_404(advance_id)
-    
-    try:
-        advance.status = data['status']
-        advance.approved_by_id = session['user_id']
-        advance.approved_at = datetime.utcnow()
-        
-        if data['status'] == 'approved':
-            advance.disbursement_date = datetime.strptime(
-                data.get('disbursement_date', date.today().isoformat()),
-                '%Y-%m-%d'
-            ).date()
-        
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Avance traitée',
-            'advance': advance.to_dict()
-        }), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # ==================== FICHES DE PAIE ====================
@@ -807,41 +495,22 @@ def generate_payslip(user_id):
         first_day = date(year, month, 1)
         last_day = date(year, month, calendar.monthrange(year, month)[1])
         
-        # Congés du mois
-        leave_days = db.session.query(db.func.sum(LeaveRequest.days_count)).filter(
-            LeaveRequest.user_id == user_id,
-            LeaveRequest.status == 'approved',
-            LeaveRequest.start_date >= first_day,
-            LeaveRequest.end_date <= last_day
-        ).scalar() or 0
-        
-        leave_deduction = db.session.query(db.func.sum(LeaveRequest.deduction_amount)).filter(
-            LeaveRequest.user_id == user_id,
-            LeaveRequest.status == 'approved',
-            LeaveRequest.start_date >= first_day,
-            LeaveRequest.end_date <= last_day
-        ).scalar() or 0
-        
-        # Absences du mois
-        absence_days = Attendance.query.filter(
-            Attendance.user_id == user_id,
-            Attendance.date >= first_day,
-            Attendance.date <= last_day,
-            Attendance.status == 'absent',
-            Attendance.is_justified == False
-        ).count()
-        
-        absence_deduction = db.session.query(db.func.sum(Attendance.deduction_amount)).filter(
-            Attendance.user_id == user_id,
-            Attendance.date >= first_day,
-            Attendance.date <= last_day
+        # Congés du mois (depuis employee_requests)
+        leave_days = db.session.query(db.func.sum(EmployeeRequest.days)).filter(
+            EmployeeRequest.user_id == user_id,
+            EmployeeRequest.type == 'leave',
+            EmployeeRequest.status == 'approved',
+            EmployeeRequest.start_date >= first_day,
+            EmployeeRequest.end_date <= last_day
         ).scalar() or 0
         
         # Avances à déduire
-        advance_deduction = db.session.query(db.func.sum(SalaryAdvance.monthly_deduction)).filter(
-            SalaryAdvance.user_id == user_id,
-            SalaryAdvance.status == 'approved',
-            SalaryAdvance.remaining_amount > 0
+        advance_deduction = db.session.query(db.func.sum(EmployeeRequest.amount)).filter(
+            EmployeeRequest.user_id == user_id,
+            EmployeeRequest.type == 'loan',
+            EmployeeRequest.status == 'approved',
+            extract('month', EmployeeRequest.approved_at) == month,
+            extract('year', EmployeeRequest.approved_at) == year
         ).scalar() or 0
         
         # Calculer salaire brut
@@ -852,7 +521,7 @@ def generate_payslip(user_id):
         cnss_employee = Decimal(str(gross_salary)) * Decimal(str(config.cnss_rate / 100))
         cnss_employer = Decimal(str(gross_salary)) * Decimal(str(config.cnss_employer_rate / 100))
         
-        # IRPP (simplifié - à adapter selon barème tunisien)
+        # IRPP (barème tunisien simplifié)
         taxable_income = float(gross_salary) - float(cnss_employee)
         if taxable_income <= 5000:
             irpp = 0
@@ -869,8 +538,6 @@ def generate_payslip(user_id):
         
         # Total déductions
         total_deductions = (
-            Decimal(str(leave_deduction)) +
-            Decimal(str(absence_deduction)) +
             Decimal(str(advance_deduction)) +
             cnss_employee +
             irpp
@@ -893,8 +560,8 @@ def generate_payslip(user_id):
         payslip.responsibility_bonus = salary.responsibility_bonus
         payslip.gross_salary = Decimal(str(gross_salary))
         
-        payslip.leave_deduction = Decimal(str(leave_deduction))
-        payslip.absence_deduction = Decimal(str(absence_deduction))
+        payslip.leave_deduction = 0
+        payslip.absence_deduction = 0
         payslip.advance_deduction = Decimal(str(advance_deduction))
         
         payslip.cnss_employee = cnss_employee
@@ -905,28 +572,27 @@ def generate_payslip(user_id):
         payslip.net_salary = net_salary
         
         payslip.working_days = config.working_days_per_month
-        payslip.days_worked = config.working_days_per_month - leave_days - absence_days
+        payslip.days_worked = config.working_days_per_month - leave_days
         payslip.leave_days = leave_days
-        payslip.absence_days = absence_days
+        payslip.absence_days = 0
         
         payslip.status = 'draft'
         
         db.session.commit()
         
-        # Mettre à jour le montant restant des avances
-        advances = SalaryAdvance.query.filter(
-            SalaryAdvance.user_id == user_id,
-            SalaryAdvance.status == 'approved',
-            SalaryAdvance.remaining_amount > 0
-        ).all()
-        
-        for adv in advances:
-            adv.remaining_amount -= adv.monthly_deduction
-            if adv.remaining_amount <= 0:
-                adv.remaining_amount = 0
-                adv.status = 'repaid'
-        
-        db.session.commit()
+        # Logger dans blockchain
+        blockchain = current_app.extensions.get('blockchain')
+        if blockchain:
+            blockchain.add_transaction({
+                'type': 'payslip_generated',
+                'payslip_id': payslip.id,
+                'user_id': user_id,
+                'month': month,
+                'year': year,
+                'net_salary': float(net_salary),
+                'generated_by': session['user_id'],
+                'timestamp': datetime.utcnow().isoformat()
+            })
         
         return jsonify({
             'success': True,
@@ -943,21 +609,46 @@ def generate_payslip(user_id):
 @payroll_bp.route('/payslips', methods=['GET'])
 @require_login
 def get_payslips():
-    """Récupérer les fiches de paie"""
+    """Récupérer les fiches de paie - AVEC CONTEXTE"""
     try:
         current_user = User.query.get(session['user_id'])
         
-        if current_user.is_admin:
-            user_id = request.args.get('user_id', type=int)
-            query = Payslip.query
-            if user_id:
-                query = query.filter_by(user_id=user_id)
-        else:
-            query = Payslip.query.filter_by(user_id=current_user.id)
+        # 🔑 NOUVEAU: Paramètre context pour distinguer profile vs manage
+        context = request.args.get('context', 'manage')  # 'profile' ou 'manage'
         
+        # 🔒 LOGIQUE CORRIGÉE:
+        # - Si context='profile' → TOUJOURS ses propres fiches (même pour admin)
+        # - Si context='manage' ET admin/DRH → TOUTES les fiches
+        # - Si context='manage' ET non-admin → ses propres fiches (fallback)
+        
+        if context == 'profile':
+            # 📌 MODE PROFILE: Tout le monde voit UNIQUEMENT ses propres fiches
+            query = Payslip.query.filter_by(user_id=current_user.id)
+            print(f"✅ [PROFILE MODE] User {current_user.id} ({current_user.role}) - Own payslips only")
+        
+        elif context == 'manage':
+            # 📌 MODE MANAGE: Admin/DRH voient tout, les autres leurs fiches
+            if current_user.is_admin or current_user.role == 'directeur_rh':
+                user_id = request.args.get('user_id', type=int)
+                query = Payslip.query
+                if user_id:
+                    query = query.filter_by(user_id=user_id)
+                print(f"✅ [MANAGE MODE] Admin/DRH {current_user.id} - All payslips")
+            else:
+                # Non-admin en mode manage → ses propres fiches
+                query = Payslip.query.filter_by(user_id=current_user.id)
+                print(f"⚠️ [MANAGE MODE] Non-admin {current_user.id} - Own payslips only")
+        
+        else:
+            # Contexte invalide → fallback sécurisé
+            query = Payslip.query.filter_by(user_id=current_user.id)
+            print(f"⚠️ [UNKNOWN CONTEXT] User {current_user.id} - Own payslips only (fallback)")
+        
+        # Filtres supplémentaires
         month = request.args.get('month', type=int)
         year = request.args.get('year', type=int)
         status = request.args.get('status')
+        search = request.args.get('search', '').strip()
         
         if month:
             query = query.filter_by(month=month)
@@ -966,7 +657,21 @@ def get_payslips():
         if status:
             query = query.filter_by(status=status)
         
+        if search:
+            query = query.join(User).filter(
+                or_(
+                    User.first_name.ilike(f'%{search}%'),
+                    User.last_name.ilike(f'%{search}%'),
+                    User.email.ilike(f'%{search}%')
+                )
+            )
+        
         payslips = query.order_by(Payslip.year.desc(), Payslip.month.desc()).all()
+        
+        # 🔍 DEBUG: Afficher les user_ids retournés
+        if payslips:
+            user_ids = list(set(p.user_id for p in payslips))
+            print(f"📊 Returned payslips: {len(payslips)} - User IDs: {user_ids}")
         
         return jsonify({
             'success': True,
@@ -974,12 +679,13 @@ def get_payslips():
         }), 200
         
     except Exception as e:
-        print(f"Erreur get_payslips: {str(e)}")
+        print(f"❌ Erreur get_payslips: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'success': False,
             'error': f'Erreur serveur: {str(e)}'
         }), 500
-
 
 @payroll_bp.route('/payslip/<int:payslip_id>/validate', methods=['POST'])
 @require_admin
@@ -993,6 +699,16 @@ def validate_payslip(payslip_id):
         payslip.validated_at = datetime.utcnow()
         
         db.session.commit()
+        
+        # Logger dans blockchain
+        blockchain = current_app.extensions.get('blockchain')
+        if blockchain:
+            blockchain.add_transaction({
+                'type': 'payslip_validated',
+                'payslip_id': payslip.id,
+                'validated_by': session['user_id'],
+                'timestamp': datetime.utcnow().isoformat()
+            })
         
         return jsonify({
             'success': True,

@@ -85,7 +85,15 @@ class EmployeeRequest(db.Model):
         """
         from models.user import User
         
-        approver = self.user.get_approver()
+        # 🔧 CORRECTION: Charger explicitement l'utilisateur depuis la DB
+        # car self.user peut être None après flush()
+        requester = User.query.get(self.user_id)
+        
+        if not requester:
+            # Si l'utilisateur n'existe pas, erreur
+            raise ValueError(f"Utilisateur avec ID {self.user_id} introuvable")
+        
+        approver = requester.get_approver()
         if approver:
             self.expected_approver_id = approver.id
             self.expected_approver_role = approver.role
@@ -95,7 +103,9 @@ class EmployeeRequest(db.Model):
             if admin:
                 self.expected_approver_id = admin.id
                 self.expected_approver_role = 'admin'
-    
+            else:
+                # Si vraiment aucun admin, lever une erreur
+                raise ValueError("Aucun approbateur disponible dans le système")
     def can_be_approved_by(self, approver_user) -> bool:
         """
         Vérifie si un utilisateur peut approuver cette demande

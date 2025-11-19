@@ -60,6 +60,10 @@
                     <i class="fas fa-building"></i>
                     <span>Départements</span>
                 </a>
+                <a href="/projects/all" class="nav-link {% if request.path.startswith('/projects') %}active{% endif %}">
+                    <i class="fas fa-project-diagram"></i>
+                    <span>Projets</span>
+                </a>
                 <a href="/users/manage" class="nav-link {% if request.path == '/users/manage' %}active{% endif %}">
                     <i class="fas fa-users"></i>
                     <span>Employés</span>
@@ -70,9 +74,13 @@
                     <i class="fas fa-comments"></i>
                     <span>Discussions</span>
                     <!-- Badge pour messages non lus (optionnel) -->
-                    <!-- {% if unread_messages_count > 0 %}
+                    {% if unread_messages_count > 0 %}
                     <span class="badge-notification">{{ unread_messages_count }}</span>
-                    {% endif %} -->
+                    {% endif %} 
+                </a>
+                <a href="/tickets" class="nav-link {% if request.path == '/tickets' %}active{% endif %}">
+                    <i class="fas fa-ticket-alt"></i>
+                    <span>Tickets</span>
                 </a>
                 
                 {% if current_user.is_admin or current_user.role == 'department_manager' %}

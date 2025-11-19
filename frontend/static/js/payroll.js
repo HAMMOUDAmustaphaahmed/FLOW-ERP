@@ -690,11 +690,12 @@ async function loadPayslips() {
     const status = document.getElementById('payslipStatusFilter')?.value || '';
     const search = document.getElementById('payslipSearchInput')?.value || currentFilters.search;
     
-    let url = '/payroll/payslips?';
-    if (month) url += `month=${month}&`;
-    if (year) url += `year=${year}&`;
-    if (status) url += `status=${status}&`;
-    if (search) url += `search=${encodeURIComponent(search)}&`;
+    // 🔑 IMPORTANT: Ajouter context=manage pour mode admin/DRH
+    let url = '/payroll/payslips?context=manage';
+    if (month) url += `&month=${month}`;
+    if (year) url += `&year=${year}`;
+    if (status) url += `&status=${status}`;
+    if (search) url += `&search=${encodeURIComponent(search)}`;
     
     try {
         const response = await fetch(url);
@@ -707,7 +708,6 @@ async function loadPayslips() {
         console.error('Erreur chargement fiches de paie:', error);
     }
 }
-
 async function reviewAdvance(status) {
     const advanceId = document.getElementById('advanceId').value;
     const disbursementDate = document.getElementById('disbursementDate').value;

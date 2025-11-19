@@ -322,7 +322,111 @@ class User(UserMixin, db.Model):
         if self.first_name and self.last_name:
             return f"{self.first_name} {self.last_name}"
         return self.username
-    
+
+
+    def get_approver(self):
+        """
+        Détermine qui doit approuver les demandes de cet utilisateur selon la hiérarchie :
+        1. Technicien/Employé avec chef → Chef de département
+        2. Technicien/Employé sans chef → Directeur RH ou Admin
+        3. Chef de département → Admin
+        4. Directeur RH → Admin
+        5. Assistant administratif → Directeur RH ou Admin
+        """
+        # Si l'utilisateur est admin, pas d'approbateur (il s'auto-approuve)
+        if self.is_admin:
+            return None
+        
+        # Technicien ou Employé avec un chef de département
+        if self.role in ['technician', 'employee'] and self.department_id:
+            # Chercher le chef de ce département
+            from models.company import Department
+            dept = Department.query.get(self.department_id)
+            if dept and dept.manager_id:
+                manager = User.query.get(dept.manager_id)
+                if manager and manager.is_active:
+                    return manager
+        
+        # Chef de département → chercher admin
+        if self.role == 'department_manager':
+            admin = User.query.filter_by(
+                is_admin=True, 
+                is_active=True,
+                company_id=self.company_id
+            ).first()
+            return admin
+        
+        # Pour les autres cas (employé sans chef, assistant admin, etc.)
+        # Chercher d'abord le Directeur RH
+        drh = User.query.filter_by(
+            role='directeur_rh',
+            is_active=True,
+            company_id=self.company_id
+        ).first()
+        
+        if drh:
+            return drh
+        
+        # Sinon, chercher un admin
+        admin = User.query.filter_by(
+            is_admin=True,
+            is_active=True,
+            company_id=self.company_id
+        ).first()
+        
+        return admin
+
+
+    def can_approve_request_for(self, requester):
+        """
+        Vérifie si cet utilisateur peut approuver les demandes d'un autre utilisateur
+        """
+        # Admin peut tout approuver
+        if self.is_admin:
+            return True
+        
+        # Directeur RH peut approuver pour tout le monde sauf admin
+        if self.role == 'directeur_rh' and not requester.is_admin:
+            return True
+        
+        # Chef de département peut approuver pour ses subordonnés
+        if self.role == 'department_manager' and self.department_id:
+            if requester.department_id == self.department_id:
+                if requester.role in ['technician', 'employee', 'assistant_administratif']:
+                    return True
+        
+        return False
+
+
+    def get_subordinates(self):
+        """
+        Retourne la liste des utilisateurs sous la responsabilité de cet utilisateur
+        """
+        if self.is_admin:
+            # Admin voit tout le monde de son entreprise
+            return User.query.filter_by(
+                company_id=self.company_id,
+                is_active=True
+            ).filter(User.id != self.id).all()
+        
+        if self.role == 'directeur_rh':
+            # DRH voit tout le monde sauf admin
+            return User.query.filter_by(
+                company_id=self.company_id,
+                is_active=True,
+                is_admin=False
+            ).all()
+        
+        if self.role == 'department_manager' and self.department_id:
+            # Chef voit son département
+            return User.query.filter_by(
+                department_id=self.department_id,
+                is_active=True
+            ).filter(User.id != self.id).all()
+        
+        return []
+
+
     def get_role_display(self) -> str:
         """Retourne le rôle en français"""
         role_map = {

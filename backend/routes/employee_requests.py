@@ -82,6 +82,11 @@ def create_request():
         return jsonify({'error': 'Type de demande invalide'}), 400
     
     try:
+        # Vérifier que l'utilisateur existe
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'Utilisateur introuvable'}), 404
+        
         # Créer la demande
         employee_request = EmployeeRequest(
             user_id=user_id,
@@ -103,7 +108,6 @@ def create_request():
             employee_request.reason = data.get('reason')
             
             # Vérifier jours disponibles
-            user = User.query.get(user_id)
             total_leave_days = 30
             used_leave_days = db.session.query(db.func.sum(EmployeeRequest.days)).filter(
                 EmployeeRequest.user_id == user_id,
@@ -124,15 +128,24 @@ def create_request():
             employee_request.end_time = data.get('end_time')
             employee_request.reason = data.get('reason')
         
-        # 🆕 Définir l'approbateur attendu selon la hiérarchie
-        employee_request.set_expected_approver()
-        
+        # Ajouter à la session AVANT de définir l'approbateur
         db.session.add(employee_request)
+        db.session.flush()
+        
+        # 🆕 Définir l'approbateur attendu selon la hiérarchie
+        try:
+            employee_request.set_expected_approver()
+        except ValueError as e:
+            db.session.rollback()
+            return jsonify({'error': str(e)}), 400
+        
+        # Flush again après avoir défini l'approbateur
         db.session.flush()
         
         # 🆕 Ajouter à la blockchain
         add_to_blockchain(employee_request, 'created', user_id)
         
+        # Commit final
         db.session.commit()
         
         # Logger dans l'audit
@@ -155,11 +168,17 @@ def create_request():
             'hierarchy_info': employee_request.get_approval_hierarchy_info()
         }), 201
         
+    except ValueError as ve:
+        db.session.rollback()
+        print(f"Erreur de validation: {str(ve)}")
+        return jsonify({'error': str(ve)}), 400
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': f'Erreur: {str(e)}'}), 500
-
-
+        print(f"Erreur inattendue: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Erreur serveur: {str(e)}'}), 500
+        
 @employee_requests_bp.route('/my-requests', methods=['GET'])
 @require_login
 def get_my_requests():

@@ -1,5 +1,6 @@
 FlowERP/
 ├── backend/
+│   ├── payslips
 │   ├── models/
 │   │   ├── __init__.py
 │   │   └── department.py
@@ -10,6 +11,9 @@ FlowERP/
 │   │   ├── __init__.py
 │   │   └── blockchain_sync.py
 │   └── .txt
+│   └── database.py
+│   └── config.py
+│   └── app.py
 ├── frontend/
 │   ├── static/
 │   │   └── js/

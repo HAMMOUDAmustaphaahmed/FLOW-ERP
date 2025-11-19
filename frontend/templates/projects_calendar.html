@@ -1,0 +1,528 @@
+{% extends "base.html" %}
+
+{% block title %}Calendrier - Gestion de Projets - FlowERP{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet' />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tickets.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+    .calendar-container {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    .toolbar {
+        background: white;
+        padding: 15px 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .fc-event {
+        cursor: pointer;
+        border: none !important;
+        padding: 2px 5px;
+    }
+    
+    .fc-event-main {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .priority-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    
+    .sidebar {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    .upcoming-task {
+        padding: 10px;
+        border-left: 3px solid #667eea;
+        margin-bottom: 10px;
+        background: #f8f9fa;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .upcoming-task:hover {
+        background: #e7f3ff;
+        transform: translateX(5px);
+    }
+    
+    .upcoming-task-title {
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+    
+    .upcoming-task-meta {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+    
+    .filter-section {
+        margin-bottom: 20px;
+    }
+    
+    .filter-section h6 {
+        margin-bottom: 10px;
+        color: #1e293b;
+    }
+    
+    .filter-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 0;
+    }
+    
+    .color-indicator {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+    }
+    
+    .stats-summary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+    }
+    
+    .stats-summary h5 {
+        margin-bottom: 15px;
+    }
+    
+    .stat-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2><i class="fas fa-calendar-alt"></i> Calendrier Partagé</h2>
+            <p class="text-muted mb-0">Vue d'ensemble des échéances et événements</p>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-outline-primary" onclick="window.location.href='/projects/all'">
+                <i class="fas fa-th"></i> Projets
+            </button>
+            <button class="btn btn-outline-primary" onclick="window.location.href='/projects/gantt'">
+                <i class="fas fa-chart-gantt"></i> Gantt
+            </button>
+            <button class="btn btn-outline-primary" onclick="window.location.href='/projects/kanban'">
+                <i class="fas fa-columns"></i> Kanban
+            </button>
+            <button class="btn btn-primary active">
+                <i class="fas fa-calendar-alt"></i> Calendrier
+            </button>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3">
+            <div class="sidebar">
+                <!-- Statistiques du jour -->
+                <div class="stats-summary">
+                    <h5><i class="fas fa-calendar-day"></i> Aujourd'hui</h5>
+                    <div class="stat-row">
+                        <span>Tâches:</span>
+                        <strong id="todayTasks">0</strong>
+                    </div>
+                    <div class="stat-row">
+                        <span>En retard:</span>
+                        <strong id="overdueTasks">0</strong>
+                    </div>
+                    <div class="stat-row">
+                        <span>Cette semaine:</span>
+                        <strong id="weekTasks">0</strong>
+                    </div>
+                </div>
+                
+                <!-- Filtres -->
+                <div class="filter-section">
+                    <h6>Départements</h6>
+                    <div id="departmentFilters"></div>
+                </div>
+                
+                <div class="filter-section">
+                    <h6>Priorités</h6>
+                    <div class="filter-checkbox">
+                        <input type="checkbox" id="filterP1" checked onchange="applyFilters()">
+                        <div class="color-indicator" style="background: #dc3545;"></div>
+                        <label for="filterP1">Critique (P1)</label>
+                    </div>
+                    <div class="filter-checkbox">
+                        <input type="checkbox" id="filterP2" checked onchange="applyFilters()">
+                        <div class="color-indicator" style="background: #fd7e14;"></div>
+                        <label for="filterP2">Haute (P2)</label>
+                    </div>
+                    <div class="filter-checkbox">
+                        <input type="checkbox" id="filterP3" checked onchange="applyFilters()">
+                        <div class="color-indicator" style="background: #0d6efd;"></div>
+                        <label for="filterP3">Normale (P3)</label>
+                    </div>
+                    <div class="filter-checkbox">
+                        <input type="checkbox" id="filterP4" checked onchange="applyFilters()">
+                        <div class="color-indicator" style="background: #6c757d;"></div>
+                        <label for="filterP4">Basse (P4)</label>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <!-- Tâches à venir -->
+                <h6 class="mb-3">Prochaines échéances</h6>
+                <div id="upcomingTasks"></div>
+            </div>
+        </div>
+        
+        <!-- Calendrier -->
+        <div class="col-md-9">
+            <!-- Barre d'outils -->
+            <div class="toolbar">
+                <button class="btn btn-primary" onclick="calendar.today()">
+                    <i class="fas fa-calendar-day"></i> Aujourd'hui
+                </button>
+                
+                <div class="btn-group">
+                    <button class="btn btn-outline-secondary" onclick="calendar.changeView('dayGridMonth')">
+                        <i class="fas fa-calendar"></i> Mois
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="calendar.changeView('timeGridWeek')">
+                        <i class="fas fa-calendar-week"></i> Semaine
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="calendar.changeView('timeGridDay')">
+                        <i class="fas fa-calendar-day"></i> Jour
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="calendar.changeView('listWeek')">
+                        <i class="fas fa-list"></i> Liste
+                    </button>
+                </div>
+                
+                <select class="form-select" id="teamMemberFilter" style="width: 200px;" onchange="applyFilters()">
+                    <option value="">Tous les membres</option>
+                </select>
+                
+                <button class="btn btn-success" onclick="openEventModal()">
+                    <i class="fas fa-plus"></i> Nouveau
+                </button>
+            </div>
+            
+            <div class="calendar-container">
+                <div id="calendar"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Événement -->
+<div class="modal fade" id="eventModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Détails de la Tâche</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="eventModalBody">
+                <!-- Contenu dynamique -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-primary" onclick="openTaskPage()">
+                    <i class="fas fa-external-link-alt"></i> Ouvrir la tâche
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
+<script>
+    let calendar = null;
+    let allEvents = [];
+    let currentEvent = null;
+    let eventModal = null;
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        eventModal = new bootstrap.Modal(document.getElementById('eventModal'));
+        initCalendar();
+        loadDepartments();
+        loadTeamMembers();
+        loadEvents();
+    });
+    
+    function initCalendar() {
+        const calendarEl = document.getElementById('calendar');
+        
+        calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next',
+                center: 'title',
+                right: ''
+            },
+            locale: 'fr',
+            buttonText: {
+                today: "Aujourd'hui",
+                month: 'Mois',
+                week: 'Semaine',
+                day: 'Jour',
+                list: 'Liste'
+            },
+            height: 'auto',
+            eventClick: function(info) {
+                showEventDetails(info.event);
+            },
+            dateClick: function(info) {
+                // TODO: Ouvrir création tâche à cette date
+                console.log('Date clicked:', info.dateStr);
+            },
+            events: [],
+            eventTimeFormat: {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            }
+        });
+        
+        calendar.render();
+    }
+    
+    async function loadEvents() {
+        try {
+            // Récupérer plage visible du calendrier
+            const view = calendar.view;
+            const startDate = view.activeStart.toISOString().split('T')[0];
+            const endDate = view.activeEnd.toISOString().split('T')[0];
+            
+            const response = await fetch(`/projects/api/calendar/events?start=${startDate}&end=${endDate}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                allEvents = data.events;
+                applyFilters();
+                updateUpcomingTasks(data.events);
+                updateStats(data.events);
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }
+    
+    function applyFilters() {
+        const teamMember = document.getElementById('teamMemberFilter')?.value;
+        const p1 = document.getElementById('filterP1').checked;
+        const p2 = document.getElementById('filterP2').checked;
+        const p3 = document.getElementById('filterP3').checked;
+        const p4 = document.getElementById('filterP4').checked;
+        
+        let filtered = allEvents.filter(event => {
+            // Filtre membre
+            if (teamMember && event.assigned_to !== teamMember) return false;
+            
+            // Filtre priorité
+            const priority = event.priority || 'P3';
+            if (priority === 'P1' && !p1) return false;
+            if (priority === 'P2' && !p2) return false;
+            if (priority === 'P3' && !p3) return false;
+            if (priority === 'P4' && !p4) return false;
+            
+            return true;
+        });
+        
+        // Mettre à jour le calendrier
+        calendar.removeAllEvents();
+        calendar.addEventSource(filtered);
+    }
+    
+    function showEventDetails(event) {
+        currentEvent = event;
+        
+        const modalBody = document.getElementById('eventModalBody');
+        modalBody.innerHTML = `
+            <div class="mb-3">
+                <h4>${event.title}</h4>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Début:</strong> ${formatDate(event.start)}</p>
+                    <p><strong>Fin:</strong> ${formatDate(event.end || event.start)}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Priorité:</strong> <span class="badge" style="background: ${event.backgroundColor}">${event.extendedProps?.priority || 'P3'}</span></p>
+                    <p><strong>Assigné à:</strong> ${event.extendedProps?.assigned_to || 'Non assigné'}</p>
+                </div>
+            </div>
+            
+            ${event.extendedProps?.description ? `
+                <div class="mt-3">
+                    <strong>Description:</strong>
+                    <p>${event.extendedProps.description}</p>
+                </div>
+            ` : ''}
+        `;
+        
+        eventModal.show();
+    }
+    
+    function updateUpcomingTasks(events) {
+        const now = new Date();
+        const upcoming = events
+            .filter(e => new Date(e.start) >= now)
+            .sort((a, b) => new Date(a.start) - new Date(b.start))
+            .slice(0, 10);
+        
+        const container = document.getElementById('upcomingTasks');
+        
+        if (upcoming.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center">Aucune tâche à venir</p>';
+            return;
+        }
+        
+        container.innerHTML = upcoming.map(event => `
+            <div class="upcoming-task" onclick="showEventById('${event.id}')">
+                <div class="upcoming-task-title">
+                    <span class="priority-dot" style="background: ${event.backgroundColor}"></span>
+                    ${event.title}
+                </div>
+                <div class="upcoming-task-meta">
+                    <i class="fas fa-calendar"></i> ${formatDate(event.start)}
+                    ${event.assigned_to ? `<br><i class="fas fa-user"></i> ${event.assigned_to}` : ''}
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    function updateStats(events) {
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+        
+        // Tâches aujourd'hui
+        const todayTasks = events.filter(e => {
+            const eventDate = new Date(e.start).toISOString().split('T')[0];
+            return eventDate === today;
+        }).length;
+        
+        // Tâches en retard
+        const overdue = events.filter(e => {
+            const eventDate = new Date(e.end || e.start);
+            return eventDate < now && e.extendedProps?.status !== 'completed';
+        }).length;
+        
+        // Tâches cette semaine
+        const weekEnd = new Date(now);
+        weekEnd.setDate(weekEnd.getDate() + 7);
+        const weekTasks = events.filter(e => {
+            const eventDate = new Date(e.start);
+            return eventDate >= now && eventDate <= weekEnd;
+        }).length;
+        
+        document.getElementById('todayTasks').textContent = todayTasks;
+        document.getElementById('overdueTasks').textContent = overdue;
+        document.getElementById('weekTasks').textContent = weekTasks;
+    }
+    
+    async function loadDepartments() {
+        try {
+            const response = await fetch('/department/list');
+            const data = await response.json();
+            
+            if (data.success) {
+                const container = document.getElementById('departmentFilters');
+                data.departments.forEach(dept => {
+                    const checkbox = document.createElement('div');
+                    checkbox.className = 'filter-checkbox';
+                    checkbox.innerHTML = `
+                        <input type="checkbox" id="dept_${dept.id}" checked onchange="applyFilters()">
+                        <label for="dept_${dept.id}">${dept.name}</label>
+                    `;
+                    container.appendChild(checkbox);
+                });
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }
+    
+    async function loadTeamMembers() {
+        try {
+            const response = await fetch('/users/list');
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.getElementById('teamMemberFilter');
+                data.users.forEach(user => {
+                    select.add(new Option(user.full_name || user.username, user.id));
+                });
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }
+    
+    function formatDate(date) {
+        if (!date) return 'N/A';
+        return new Date(date).toLocaleDateString('fr-FR', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+    
+    function showEventById(eventId) {
+        const event = calendar.getEventById(eventId);
+        if (event) {
+            showEventDetails(event);
+        }
+    }
+    
+    function openEventModal() {
+        // TODO: Ouvrir modal création événement
+        alert('Fonctionnalité en cours de développement');
+    }
+    
+    function openTaskPage() {
+        if (currentEvent) {
+            window.location.href = `/projects/tasks/${currentEvent.id}`;
+        }
+    }
+    
+    // Recharger au changement de vue
+    calendar.on('datesSet', function() {
+        loadEvents();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,544 @@
+{% extends "base.html" %}
+
+{% block title %}Gestion de Projets - FlowERP{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tickets.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+    .project-card {
+        border: 1px solid #e0e0e0;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: pointer;
+        background: white;
+    }
+    
+    .project-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    }
+    
+    .priority-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .priority-critical { 
+        background: #dc3545; 
+        color: white; 
+    }
+    
+    .priority-high { 
+        background: #fd7e14; 
+        color: white; 
+    }
+    
+    .priority-normal { 
+        background: #0d6efd; 
+        color: white; 
+    }
+    
+    .priority-low { 
+        background: #6c757d; 
+        color: white; 
+    }
+    
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+    }
+    
+    .status-planned { 
+        background: #e7f3ff; 
+        color: #0d6efd; 
+    }
+    
+    .status-active { 
+        background: #d1f2eb; 
+        color: #198754; 
+    }
+    
+    .status-completed { 
+        background: #d1ecf1; 
+        color: #0c5460; 
+    }
+    
+    .status-suspended { 
+        background: #fff3cd; 
+        color: #856404; 
+    }
+    
+    .progress-bar-wrapper {
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 10px 0;
+    }
+    
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #0d6efd, #0dcaf0);
+        transition: width 0.3s;
+    }
+    
+    .member-avatars {
+        display: flex;
+        gap: -8px;
+    }
+    
+    .member-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #0d6efd;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        border: 2px solid white;
+        font-weight: 600;
+    }
+    
+    .filter-sidebar {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+    }
+    
+    .tag-label {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        background: #e7f3ff;
+        color: #0d6efd;
+        font-size: 11px;
+        margin-right: 5px;
+    }
+    
+    .stats-card {
+        border-radius: 12px;
+        padding: 20px;
+        color: white;
+        margin-bottom: 20px;
+    }
+    
+    .stats-card h3 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    
+    .stats-card p {
+        margin: 5px 0 0 0;
+        opacity: 0.9;
+    }
+    
+    .bg-primary-custom { background: #667eea; }
+    .bg-success-custom { background: #10b981; }
+    .bg-info-custom { background: #3b82f6; }
+    .bg-warning-custom { background: #f59e0b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Sidebar Filtres -->
+        <div class="col-md-3">
+            <div class="filter-sidebar">
+                <h5><i class="fas fa-filter"></i> Filtres</h5>
+                <hr>
+                
+                <!-- Recherche -->
+                <div class="mb-3">
+                    <label class="form-label">Recherche</label>
+                    <input type="text" class="form-control" id="searchInput" 
+                           placeholder="Nom, description...">
+                </div>
+                
+                <!-- Statut -->
+                <div class="mb-3">
+                    <label class="form-label">Statut</label>
+                    <select class="form-select" id="statusFilter">
+                        <option value="">Tous</option>
+                        <option value="planned">Planifié</option>
+                        <option value="active">En cours</option>
+                        <option value="completed">Terminé</option>
+                        <option value="suspended">Suspendu</option>
+                    </select>
+                </div>
+                
+                <!-- Priorité -->
+                <div class="mb-3">
+                    <label class="form-label">Priorité</label>
+                    <select class="form-select" id="priorityFilter">
+                        <option value="">Toutes</option>
+                        <option value="critical">Critique</option>
+                        <option value="high">Haute</option>
+                        <option value="normal">Normale</option>
+                        <option value="low">Basse</option>
+                    </select>
+                </div>
+                
+                <!-- Département -->
+                <div class="mb-3">
+                    <label class="form-label">Département</label>
+                    <select class="form-select" id="departmentFilter">
+                        <option value="">Tous</option>
+                    </select>
+                </div>
+                
+                <button class="btn btn-primary w-100" onclick="applyFilters()">
+                    <i class="fas fa-sync"></i> Appliquer
+                </button>
+                <button class="btn btn-outline-secondary w-100 mt-2" onclick="resetFilters()">
+                    <i class="fas fa-times"></i> Réinitialiser
+                </button>
+            </div>
+        </div>
+        
+        <!-- Contenu principal -->
+        <div class="col-md-9">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2><i class="fas fa-project-diagram"></i> Gestion de Projets</h2>
+                    <p class="text-muted">Vue d'ensemble de tous vos projets</p>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary active" id="viewCards">
+                        <i class="fas fa-th"></i> Cartes
+                    </button>
+                    <button class="btn btn-outline-primary" id="viewList">
+                        <i class="fas fa-list"></i> Liste
+                    </button>
+                    <a href="/projects/gantt" class="btn btn-outline-primary">
+                        <i class="fas fa-chart-gantt"></i> Gantt
+                    </a>
+                    <a href="/projects/kanban" class="btn btn-outline-primary">
+                        <i class="fas fa-columns"></i> Kanban
+                    </a>
+                    <a href="/projects/calendar" class="btn btn-success">
+                        <i class="fas fa-calendar"></i> Calendrier
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Statistiques rapides -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="stats-card bg-primary-custom">
+                        <h3 id="totalProjects">0</h3>
+                        <p>Projets Totaux</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card bg-success-custom">
+                        <h3 id="activeProjects">0</h3>
+                        <p>En Cours</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card bg-info-custom">
+                        <h3 id="completedProjects">0</h3>
+                        <p>Terminés</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="stats-card bg-warning-custom">
+                        <h3 id="delayedProjects">0</h3>
+                        <p>En Retard</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Liste des projets -->
+            <div id="projectsContainer" class="row"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let allProjects = [];
+    
+    // Charger projets au démarrage
+    document.addEventListener('DOMContentLoaded', function() {
+        loadProjects();
+        loadDepartments();
+    });
+    
+    async function loadProjects() {
+        try {
+            const response = await fetch('/projects/api/list');
+            const data = await response.json();
+            
+            if (data.success) {
+                allProjects = data.projects;
+                displayProjects(allProjects);
+                updateStats(allProjects);
+            } else {
+                showNotification('Erreur lors du chargement des projets', 'error');
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            showNotification('Erreur de connexion au serveur', 'error');
+        }
+    }
+    
+    function displayProjects(projects) {
+        const container = document.getElementById('projectsContainer');
+        container.innerHTML = '';
+        
+        if (projects.length === 0) {
+            container.innerHTML = `
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Aucun projet trouvé</p>
+                    <a href="/projects/create" class="btn btn-primary mt-2">
+                        <i class="fas fa-plus"></i> Créer un projet
+                    </a>
+                </div>
+            `;
+            return;
+        }
+        
+        projects.forEach(project => {
+            const card = createProjectCard(project);
+            container.innerHTML += card;
+        });
+    }
+    
+    function createProjectCard(project) {
+        const priorityClass = `priority-${project.priority}`;
+        const statusClass = `status-${project.status}`;
+        const description = project.description 
+            ? (project.description.length > 80 
+                ? project.description.substring(0, 80) + '...' 
+                : project.description)
+            : 'Aucune description';
+        
+        const tags = project.tags && project.tags.length > 0
+            ? project.tags.map(tag => `<span class="tag-label">${tag}</span>`).join('')
+            : '';
+        
+        const managerInitials = project.project_manager 
+            ? getInitials(project.project_manager.name)
+            : '?';
+        
+        const managerName = project.project_manager 
+            ? project.project_manager.name 
+            : 'Non assigné';
+        
+        const endDate = project.end_date 
+            ? new Date(project.end_date).toLocaleDateString('fr-FR')
+            : 'Pas de deadline';
+        
+        return `
+            <div class="col-md-4">
+                <div class="project-card" onclick="openProject(${project.id})">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="mb-1">${escapeHtml(project.name)}</h5>
+                        <span class="priority-badge ${priorityClass}">
+                            ${getPriorityLabel(project.priority)}
+                        </span>
+                    </div>
+                    
+                    <span class="status-badge ${statusClass}">
+                        ${getStatusLabel(project.status)}
+                    </span>
+                    
+                    <p class="text-muted mt-2 mb-3" style="font-size: 14px;">
+                        ${escapeHtml(description)}
+                    </p>
+                    
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar-fill" 
+                             style="width: ${project.progress_percentage}%"></div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted">${project.progress_percentage}% complété</small>
+                        <small class="text-muted">${project.task_count || 0} tâches</small>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div class="member-avatars">
+                            <div class="member-avatar" title="${managerName}">
+                                ${managerInitials}
+                            </div>
+                        </div>
+                        <div>${tags}</div>
+                    </div>
+                    
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar"></i> ${endDate}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    function getInitials(name) {
+        if (!name) return '?';
+        return name.split(' ')
+            .map(n => n[0])
+            .join('')
+            .toUpperCase()
+            .substring(0, 2);
+    }
+    
+    function getPriorityLabel(priority) {
+        const labels = {
+            'critical': 'Critique',
+            'high': 'Haute',
+            'normal': 'Normale',
+            'low': 'Basse'
+        };
+        return labels[priority] || priority;
+    }
+    
+    function getStatusLabel(status) {
+        const labels = {
+            'planned': 'Planifié',
+            'active': 'En cours',
+            'completed': 'Terminé',
+            'suspended': 'Suspendu'
+        };
+        return labels[status] || status;
+    }
+    
+    function updateStats(projects) {
+        document.getElementById('totalProjects').textContent = projects.length;
+        document.getElementById('activeProjects').textContent = 
+            projects.filter(p => p.status === 'active').length;
+        document.getElementById('completedProjects').textContent = 
+            projects.filter(p => p.status === 'completed').length;
+        
+        // Projets en retard (deadline passée et non terminés)
+        const delayed = projects.filter(p => {
+            if (p.status === 'completed') return false;
+            if (!p.end_date) return false;
+            return new Date(p.end_date) < new Date();
+        }).length;
+        document.getElementById('delayedProjects').textContent = delayed;
+    }
+    
+    function applyFilters() {
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const status = document.getElementById('statusFilter').value;
+        const priority = document.getElementById('priorityFilter').value;
+        const department = document.getElementById('departmentFilter').value;
+        
+        let filtered = allProjects.filter(project => {
+            // Filtre recherche
+            if (search) {
+                const searchMatch = 
+                    project.name.toLowerCase().includes(search) ||
+                    (project.description && project.description.toLowerCase().includes(search)) ||
+                    (project.code && project.code.toLowerCase().includes(search));
+                if (!searchMatch) return false;
+            }
+            
+            // Filtre statut
+            if (status && project.status !== status) return false;
+            
+            // Filtre priorité
+            if (priority && project.priority !== priority) return false;
+            
+            // Filtre département
+            if (department && project.department !== department) return false;
+            
+            return true;
+        });
+        
+        displayProjects(filtered);
+        updateStats(filtered);
+    }
+    
+    function resetFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('priorityFilter').value = '';
+        document.getElementById('departmentFilter').value = '';
+        displayProjects(allProjects);
+        updateStats(allProjects);
+    }
+    
+    function openProject(projectId) {
+        window.location.href = `/projects/${projectId}`;
+    }
+    
+    async function loadDepartments() {
+        try {
+            const response = await fetch('/department/list');
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.getElementById('departmentFilter');
+                data.departments.forEach(dept => {
+                    const option = document.createElement('option');
+                    option.value = dept.name;
+                    option.textContent = dept.name;
+                    select.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Erreur chargement départements:', error);
+        }
+    }
+    
+    // Fonction utilitaire pour échapper le HTML
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // Fonction de notification
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+        notification.style.cssText = 'position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+    
+    // Gestion des vues (cartes/liste)
+    document.getElementById('viewCards')?.addEventListener('click', function() {
+        this.classList.add('active');
+        document.getElementById('viewList')?.classList.remove('active');
+        // Logique d'affichage en cartes (déjà implémentée)
+    });
+    
+    document.getElementById('viewList')?.addEventListener('click', function() {
+        this.classList.add('active');
+        document.getElementById('viewCards')?.classList.remove('active');
+        // TODO: Implémenter vue liste
+        showNotification('Vue liste en cours de développement', 'info');
+    });
+</script>
+{% endblock %}

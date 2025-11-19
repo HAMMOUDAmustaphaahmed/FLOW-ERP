@@ -1,0 +1,612 @@
+{% extends "base.html" %}
+
+{% block title %}Kanban - Gestion de Projets - FlowERP{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tickets.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<style>
+    .kanban-board {
+        display: flex;
+        gap: 20px;
+        overflow-x: auto;
+        padding: 20px;
+        min-height: calc(100vh - 200px);
+    }
+    
+    .kanban-column {
+        flex: 0 0 300px;
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 15px;
+        max-height: calc(100vh - 220px);
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .kanban-column-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #dee2e6;
+    }
+    
+    .kanban-column-title {
+        font-weight: 700;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .kanban-column-count {
+        background: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+    }
+    
+    .kanban-cards {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 100px;
+    }
+    
+    .kanban-card {
+        background: white;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        cursor: grab;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        transition: all 0.2s;
+    }
+    
+    .kanban-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }
+    
+    .kanban-card.dragging {
+        opacity: 0.5;
+        cursor: grabbing;
+    }
+    
+    .kanban-card-title {
+        font-weight: 600;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+    }
+    
+    .kanban-card-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8rem;
+        color: #64748b;
+        margin-top: 10px;
+    }
+    
+    .priority-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    
+    .priority-P1 { background: #dc3545; }
+    .priority-P2 { background: #fd7e14; }
+    .priority-P3 { background: #0d6efd; }
+    .priority-P4 { background: #6c757d; }
+    
+    .kanban-card-labels {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+    }
+    
+    .label-badge {
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        background: #e7f3ff;
+        color: #0d6efd;
+    }
+    
+    .add-card-btn {
+        background: white;
+        border: 2px dashed #dee2e6;
+        border-radius: 8px;
+        padding: 10px;
+        text-align: center;
+        cursor: pointer;
+        color: #64748b;
+        transition: all 0.2s;
+    }
+    
+    .add-card-btn:hover {
+        border-color: #667eea;
+        color: #667eea;
+    }
+    
+    .column-backlog { border-top: 3px solid #6c757d; }
+    .column-todo { border-top: 3px solid #0d6efd; }
+    .column-in-progress { border-top: 3px solid #ffc107; }
+    .column-in-review { border-top: 3px solid #17a2b8; }
+    .column-completed { border-top: 3px solid #28a745; }
+    
+    .filters-bar {
+        background: white;
+        padding: 15px 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2><i class="fas fa-columns"></i> Tableau Kanban</h2>
+            <p class="text-muted mb-0">Visualisez et organisez vos tâches</p>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-outline-primary" onclick="window.location.href='/projects/all'">
+                <i class="fas fa-th"></i> Projets
+            </button>
+            <button class="btn btn-outline-primary" onclick="window.location.href='/projects/gantt'">
+                <i class="fas fa-chart-gantt"></i> Gantt
+            </button>
+            <button class="btn btn-primary active">
+                <i class="fas fa-columns"></i> Kanban
+            </button>
+        </div>
+    </div>
+    
+    <!-- Filtres -->
+    <div class="filters-bar">
+        <select class="form-select" id="projectFilter" style="width: 250px;" onchange="loadKanbanData()">
+            <option value="">Sélectionner un projet...</option>
+        </select>
+        
+        <select class="form-select" id="assignedFilter" style="width: 200px;" onchange="filterCards()">
+            <option value="">Tous les membres</option>
+        </select>
+        
+        <select class="form-select" id="priorityFilter" style="width: 150px;" onchange="filterCards()">
+            <option value="">Toutes priorités</option>
+            <option value="P1">P1 - Critique</option>
+            <option value="P2">P2 - Haute</option>
+            <option value="P3">P3 - Normale</option>
+            <option value="P4">P4 - Basse</option>
+        </select>
+        
+        <input type="text" class="form-control" id="searchFilter" 
+               placeholder="Rechercher..." style="width: 200px;" 
+               oninput="filterCards()">
+    </div>
+    
+    <!-- Tableau Kanban -->
+    <div class="kanban-board" id="kanbanBoard">
+        <!-- Backlog -->
+        <div class="kanban-column column-backlog" data-column="backlog">
+            <div class="kanban-column-header">
+                <div class="kanban-column-title">
+                    <i class="fas fa-inbox"></i>
+                    Backlog
+                    <span class="kanban-column-count">0</span>
+                </div>
+            </div>
+            <div class="kanban-cards" data-column="backlog"></div>
+            <div class="add-card-btn" onclick="openTaskModal('backlog')">
+                <i class="fas fa-plus"></i> Nouvelle tâche
+            </div>
+        </div>
+        
+        <!-- À faire -->
+        <div class="kanban-column column-todo" data-column="todo">
+            <div class="kanban-column-header">
+                <div class="kanban-column-title">
+                    <i class="fas fa-list-check"></i>
+                    À faire
+                    <span class="kanban-column-count">0</span>
+                </div>
+            </div>
+            <div class="kanban-cards" data-column="todo"></div>
+            <div class="add-card-btn" onclick="openTaskModal('todo')">
+                <i class="fas fa-plus"></i> Nouvelle tâche
+            </div>
+        </div>
+        
+        <!-- En cours -->
+        <div class="kanban-column column-in-progress" data-column="in_progress">
+            <div class="kanban-column-header">
+                <div class="kanban-column-title">
+                    <i class="fas fa-spinner"></i>
+                    En cours
+                    <span class="kanban-column-count">0</span>
+                </div>
+            </div>
+            <div class="kanban-cards" data-column="in_progress"></div>
+            <div class="add-card-btn" onclick="openTaskModal('in_progress')">
+                <i class="fas fa-plus"></i> Nouvelle tâche
+            </div>
+        </div>
+        
+        <!-- En revue -->
+        <div class="kanban-column column-in-review" data-column="in_review">
+            <div class="kanban-column-header">
+                <div class="kanban-column-title">
+                    <i class="fas fa-search"></i>
+                    En revue
+                    <span class="kanban-column-count">0</span>
+                </div>
+            </div>
+            <div class="kanban-cards" data-column="in_review"></div>
+            <div class="add-card-btn" onclick="openTaskModal('in_review')">
+                <i class="fas fa-plus"></i> Nouvelle tâche
+            </div>
+        </div>
+        
+        <!-- Terminé -->
+        <div class="kanban-column column-completed" data-column="completed">
+            <div class="kanban-column-header">
+                <div class="kanban-column-title">
+                    <i class="fas fa-check-circle"></i>
+                    Terminé
+                    <span class="kanban-column-count">0</span>
+                </div>
+            </div>
+            <div class="kanban-cards" data-column="completed"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Création/Édition Tâche -->
+<div class="modal fade" id="taskModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nouvelle Tâche</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="taskForm">
+                    <input type="hidden" id="taskColumn" name="kanban_column">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Titre *</label>
+                        <input type="text" class="form-control" name="title" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Priorité</label>
+                                <select class="form-select" name="priority">
+                                    <option value="P3">P3 - Normale</option>
+                                    <option value="P1">P1 - Critique</option>
+                                    <option value="P2">P2 - Haute</option>
+                                    <option value="P4">P4 - Basse</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Assigner à</label>
+                                <select class="form-select" name="assigned_to_id" id="assignToSelect">
+                                    <option value="">Non assigné</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Date de début</label>
+                                <input type="date" class="form-control" name="start_date">
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Date d'échéance</label>
+                                <input type="date" class="form-control" name="due_date">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="saveTask()">
+                    <i class="fas fa-save"></i> Enregistrer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let allTasks = [];
+    let currentProjectId = null;
+    let taskModal = null;
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+        loadProjects();
+        loadUsers();
+        setupDragAndDrop();
+    });
+    
+    async function loadProjects() {
+        try {
+            const response = await fetch('/projects/api/list?status=active');
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.getElementById('projectFilter');
+                data.projects.forEach(project => {
+                    select.add(new Option(project.name, project.id));
+                });
+                
+                // Charger premier projet par défaut
+                if (data.projects.length > 0) {
+                    select.value = data.projects[0].id;
+                    currentProjectId = data.projects[0].id;
+                    loadKanbanData();
+                }
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }
+    
+    async function loadUsers() {
+        try {
+            const response = await fetch('/users/list');
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.getElementById('assignToSelect');
+                const filterSelect = document.getElementById('assignedFilter');
+                
+                data.users.forEach(user => {
+                    select.add(new Option(user.full_name || user.username, user.id));
+                    filterSelect.add(new Option(user.full_name || user.username, user.id));
+                });
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }
+    
+    async function loadKanbanData() {
+        const projectId = document.getElementById('projectFilter').value;
+        if (!projectId) return;
+        
+        currentProjectId = projectId;
+        
+        try {
+            const response = await fetch(`/projects/api/kanban/${projectId}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                allTasks = [];
+                Object.entries(data.columns).forEach(([column, tasks]) => {
+                    allTasks = allTasks.concat(tasks);
+                });
+                renderKanban(data.columns);
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+        }
+    }
+    
+    function renderKanban(columns) {
+        Object.entries(columns).forEach(([columnName, tasks]) => {
+            const container = document.querySelector(`.kanban-cards[data-column="${columnName}"]`);
+            const countBadge = document.querySelector(`.kanban-column[data-column="${columnName}"] .kanban-column-count`);
+            
+            container.innerHTML = '';
+            countBadge.textContent = tasks.length;
+            
+            tasks.forEach(task => {
+                container.appendChild(createTaskCard(task));
+            });
+        });
+    }
+    
+    function createTaskCard(task) {
+        const card = document.createElement('div');
+        card.className = 'kanban-card';
+        card.draggable = true;
+        card.dataset.taskId = task.id;
+        
+        const labels = task.labels && task.labels.length > 0
+            ? `<div class="kanban-card-labels">
+                ${task.labels.map(l => `<span class="label-badge">${l}</span>`).join('')}
+               </div>`
+            : '';
+        
+        const assignee = task.assigned_to 
+            ? `<span><i class="fas fa-user"></i> ${task.assigned_to.name}</span>`
+            : '<span class="text-muted">Non assigné</span>';
+        
+        card.innerHTML = `
+            <div class="kanban-card-title">
+                <span class="priority-dot priority-${task.priority}"></span>
+                ${escapeHtml(task.title)}
+            </div>
+            ${labels}
+            <div class="kanban-card-meta">
+                ${assignee}
+                <span>${task.progress_percentage || 0}%</span>
+            </div>
+        `;
+        
+        card.addEventListener('click', () => openTaskDetails(task.id));
+        
+        return card;
+    }
+    
+    function setupDragAndDrop() {
+        const cards = document.querySelectorAll('.kanban-card');
+        const columns = document.querySelectorAll('.kanban-cards');
+        
+        document.addEventListener('dragstart', function(e) {
+            if (e.target.classList.contains('kanban-card')) {
+                e.target.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', e.target.dataset.taskId);
+            }
+        });
+        
+        document.addEventListener('dragend', function(e) {
+            if (e.target.classList.contains('kanban-card')) {
+                e.target.classList.remove('dragging');
+            }
+        });
+        
+        columns.forEach(column => {
+            column.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            });
+            
+            column.addEventListener('drop', async function(e) {
+                e.preventDefault();
+                const taskId = e.dataTransfer.getData('text/plain');
+                const targetColumn = this.dataset.column;
+                
+                await moveTask(taskId, targetColumn);
+            });
+        });
+    }
+    
+    async function moveTask(taskId, targetColumn) {
+        try {
+            const response = await fetch('/projects/api/kanban/move-task', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    task_id: parseInt(taskId),
+                    target_column: targetColumn
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                loadKanbanData(); // Recharger
+            } else {
+                alert('Erreur lors du déplacement');
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            alert('Erreur de connexion');
+        }
+    }
+    
+    function openTaskModal(column) {
+        document.getElementById('taskColumn').value = column;
+        document.getElementById('taskForm').reset();
+        taskModal.show();
+    }
+    
+    async function saveTask() {
+        const form = document.getElementById('taskForm');
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        
+        if (!data.title) {
+            alert('Le titre est requis');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/projects/api/${currentProjectId}/tasks`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                taskModal.hide();
+                loadKanbanData();
+            } else {
+                alert('Erreur: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            alert('Erreur de connexion');
+        }
+    }
+    
+    function openTaskDetails(taskId) {
+        // TODO: Ouvrir modal détails tâche
+        console.log('Open task:', taskId);
+    }
+    
+    function filterCards() {
+        const assignedFilter = document.getElementById('assignedFilter').value;
+        const priorityFilter = document.getElementById('priorityFilter').value;
+        const searchText = document.getElementById('searchFilter').value.toLowerCase();
+        
+        let filtered = allTasks;
+        
+        if (assignedFilter) {
+            filtered = filtered.filter(t => t.assigned_to?.id == assignedFilter);
+        }
+        
+        if (priorityFilter) {
+            filtered = filtered.filter(t => t.priority === priorityFilter);
+        }
+        
+        if (searchText) {
+            filtered = filtered.filter(t => 
+                t.title.toLowerCase().includes(searchText) ||
+                (t.description && t.description.toLowerCase().includes(searchText))
+            );
+        }
+        
+        // Regrouper par colonne
+        const groupedByColumn = {};
+        ['backlog', 'todo', 'in_progress', 'in_review', 'completed'].forEach(col => {
+            groupedByColumn[col] = filtered.filter(t => t.kanban_column === col);
+        });
+        
+        renderKanban(groupedByColumn);
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+</script>
+{% endblock %}

@@ -7,6 +7,7 @@ import os
 from datetime import timedelta
 from config import config
 from database import db
+from models.payroll import Payslip
 
 # Import des routes
 from routes.auth import auth_bp
@@ -19,6 +20,9 @@ from routes.department_managers import dept_managers_bp
 from routes.employee_requests import employee_requests_bp
 from routes.payroll import payroll_bp
 from routes.chat import chat_bp, init_socketio
+from routes.tickets import tickets_bp
+from routes.projects import projects_bp
+
 
 def get_blockchain():
     """Fonction pour obtenir l'instance blockchain sans import circulaire"""
@@ -62,6 +66,9 @@ def create_app(config_name='development'):
     app.register_blueprint(employee_requests_bp)
     app.register_blueprint(payroll_bp)
     app.register_blueprint(chat_bp)
+    app.register_blueprint(tickets_bp)
+    app.register_blueprint(projects_bp)
+
     
     # Initialiser SocketIO et le retourner
     socketio = init_socketio(app)
@@ -123,6 +130,52 @@ def create_app(config_name='development'):
             return redirect(url_for('auth.login_page'))
         
         return render_template('departments.html', user=user)
+    @app.route('/projects')
+    def projects_page():
+        """Page de gestion des départements"""
+        if 'user_id' not in session:
+            return redirect(url_for('auth.login_page'))
+        
+        from models.user import User
+        user = User.query.get(session['user_id'])
+        
+        if not user or not user.is_active:
+            session.clear()
+            return redirect(url_for('auth.login_page'))
+        
+        return render_template('projects_all.html', user=user)
+    
+    @app.route('/projects/<int:project_id>')
+    def project_detail_page(project_id):
+        """Page de détail d'un projet"""
+        if 'user_id' not in session:
+            return redirect(url_for('auth.login_page'))
+        
+        from models.user import User
+        from models.project import Project
+        
+        user = User.query.get(session['user_id'])
+        project = Project.query.get_or_404(project_id)
+        
+        # Vérifier les permissions
+        if not user.is_admin and project.company_id != user.company_id:
+            return redirect(url_for('dashboard'))
+        
+        return render_template('project_detail.html', project=project, user=user)
+    @app.route('/tickets')
+    def tickets_page():
+        """Page de gestion des tickets"""
+        if 'user_id' not in session:
+            return redirect(url_for('auth.login_page'))
+        
+        from models.user import User
+        user = User.query.get(session['user_id'])
+        
+        if not user or not user.is_active:
+            session.clear()
+            return redirect(url_for('auth.login_page'))
+        
+        return render_template('tickets.html', user=user)
     
     @app.route('/profile')
     def profile():
