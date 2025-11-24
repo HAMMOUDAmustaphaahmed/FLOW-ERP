@@ -108,14 +108,22 @@ def projects_create_page():
 @projects_bp.route('/api/list', methods=['GET'])
 @require_login
 def list_projects():
-    """Liste tous les projets avec filtres"""
+    """Liste tous les projets avec filtres - VERSION DEBUG"""
     user = User.query.get(session['user_id'])
+    print(f"DEBUG: User {user.id} - Admin: {user.is_admin} - Company: {user.company_id}")  # Debug
     
     status = request.args.get('status')
     department_id = request.args.get('department_id', type=int)
     
+    # Debug: Vérifier les projets dans la base
+    all_company_projects = Project.query.filter_by(company_id=user.company_id).all()
+    print(f"DEBUG: Tous les projets de l'entreprise: {len(all_company_projects)}")
+    for p in all_company_projects:
+        print(f"  - Projet: {p.name} (ID: {p.id}, Status: {p.status})")
+    
     if user.is_admin:
         query = Project.query.filter_by(company_id=user.company_id)
+        print("DEBUG: Mode ADMIN - tous les projets de l'entreprise")
     else:
         query = Project.query.filter(
             and_(
@@ -127,19 +135,29 @@ def list_projects():
                 )
             )
         )
+        print(f"DEBUG: Mode USER - département: {user.department_id}, PM: {user.id}")
     
     if status:
         query = query.filter_by(status=status)
+        print(f"DEBUG: Filtre status: {status}")
+    
     if department_id:
         query = query.filter_by(department_id=department_id)
+        print(f"DEBUG: Filtre département: {department_id}")
     
     projects = query.filter(Project.archived_at.is_(None)).all()
+    print(f"DEBUG: Projets après filtres: {len(projects)}")
     
     return jsonify({
         'success': True,
-        'projects': [p.to_dict() for p in projects]
+        'projects': [p.to_dict() for p in projects],
+        'debug': {
+            'total_company_projects': len(all_company_projects),
+            'filtered_projects': len(projects),
+            'user_company': user.company_id,
+            'user_is_admin': user.is_admin
+        }
     })
-
 
 @projects_bp.route('/api/<int:project_id>', methods=['GET'])
 @require_login
@@ -288,46 +306,6 @@ def update_project(project_id):
 
 # ==================== API: TÂCHES - CRUD COMPLET ====================
 
-@projects_bp.route('/api/<int:project_id>/tasks', methods=['POST'])
-@require_login
-def create_task(project_id):
-    """Créer une tâche"""
-    project = Project.query.get_or_404(project_id)
-    user = User.query.get(session['user_id'])
-    
-    if not can_manage_project(user, project):
-        return jsonify({'error': 'Accès non autorisé'}), 403
-    
-    data = request.get_json()
-    
-    try:
-        task = ProjectTask(
-            project_id=project_id,
-            title=SecurityValidator.sanitize_input(data['title']),
-            description=SecurityValidator.sanitize_input(data.get('description', '')),
-            assigned_to_id=data.get('assigned_to_id'),
-            priority=data.get('priority', 'P3'),
-            status='todo',
-            start_date=datetime.fromisoformat(data['start_date']) if data.get('start_date') else None,
-            due_date=datetime.fromisoformat(data['due_date']) if data.get('due_date') else None,
-            estimated_hours=data.get('estimated_hours'),
-            kanban_column=data.get('kanban_column', 'backlog'),
-            created_by_id=user.id
-        )
-        
-        db.session.add(task)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Tâche créée avec succès',
-            'task': task.to_dict()
-        }), 201
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
-
 
 @projects_bp.route('/api/tasks/<int:task_id>', methods=['GET'])
 @require_login
@@ -342,11 +320,10 @@ def get_task(task_id):
     
     return jsonify({'success': True, 'task': data})
 
-
 @projects_bp.route('/api/tasks/<int:task_id>', methods=['PUT'])
 @require_login
 def update_task(task_id):
-    """Mettre à jour une tâche - PERMISSIONS ÉTENDUES"""
+    """Mettre à jour une tâche avec vérification de complétion du projet"""
     task = ProjectTask.query.get_or_404(task_id)
     user = User.query.get(session['user_id'])
     
@@ -381,10 +358,8 @@ def update_task(task_id):
         task.updated_at = datetime.utcnow()
         db.session.commit()
         
-        # Recalculer progression du projet
-        project = task.project
-        project.progress_percentage = project.calculate_progress()
-        db.session.commit()
+        # Vérifier automatiquement la complétion du projet
+        check_and_update_project_completion(task.project)
         
         return jsonify({
             'success': True,
@@ -395,8 +370,6 @@ def update_task(task_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
-
 @projects_bp.route('/api/tasks/<int:task_id>', methods=['DELETE'])
 @require_login
 def delete_task(task_id):
@@ -584,6 +557,152 @@ def get_gantt_data(project_id):
     })
 
 
+@projects_bp.route('/api/<int:project_id>/tasks', methods=['POST'])
+@require_login
+def create_task(project_id):
+    """Créer une tâche - CORRIGÉ"""
+    project = Project.query.get_or_404(project_id)  # Doit retourner 404 si projet non trouvé
+    user = User.query.get(session['user_id'])
+    
+    if not can_manage_project(user, project):
+        return jsonify({'error': 'Accès non autorisé'}), 403
+    
+    data = request.get_json()
+    
+    try:
+        task = ProjectTask(
+            project_id=project_id,
+            title=SecurityValidator.sanitize_input(data['title']),
+            description=SecurityValidator.sanitize_input(data.get('description', '')),
+            assigned_to_id=data.get('assigned_to_id'),
+            priority=data.get('priority', 'P3'),
+            status='todo',
+            start_date=datetime.fromisoformat(data['start_date']) if data.get('start_date') else None,
+            due_date=datetime.fromisoformat(data['due_date']) if data.get('due_date') else None,
+            estimated_hours=data.get('estimated_hours'),
+            kanban_column=data.get('kanban_column', 'backlog'),
+            created_by_id=user.id
+        )
+        
+        db.session.add(task)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Tâche créée avec succès',
+            'task': task.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Erreur serveur: {str(e)}'}), 500
+# ==================== API: COMPLÉTION AUTOMATIQUE ====================
+
+def check_and_update_project_completion(project):
+    """Vérifie et met à jour automatiquement le statut du projet"""
+    from datetime import date
+    
+    # 1. Vérifier si toutes les tâches sont complétées
+    total_tasks = len(project.tasks)
+    if total_tasks > 0:
+        completed_tasks = sum(1 for task in project.tasks if task.status == 'completed')
+        project.progress_percentage = int((completed_tasks / total_tasks) * 100)
+        
+        # Si toutes les tâches sont complétées
+        if completed_tasks == total_tasks and project.status != 'completed':
+            project.status = 'completed'
+            project.updated_at = datetime.utcnow()
+            
+            # Logger l'événement
+            AuditLogger.log_action(
+                None,
+                'project_auto_completed',
+                'project',
+                project.id,
+                {'reason': 'all_tasks_completed'}
+            )
+    
+    # 2. Vérifier si la date de fin est dépassée
+    if project.end_date and date.today() > project.end_date:
+        if project.status == 'active' and project.progress_percentage < 100:
+            # Projet en retard
+            project.status = 'delayed'
+        elif project.progress_percentage == 100 and project.status != 'completed':
+            # Projet terminé après la deadline
+            project.status = 'completed'
+    
+    # 3. Vérifier les jalons
+    if project.milestones:
+        for milestone in project.milestones:
+            if milestone.target_date < date.today() and milestone.status == 'pending':
+                milestone.status = 'missed'
+    
+    db.session.commit()
+
+
+@projects_bp.route('/api/<int:project_id>/check-completion', methods=['POST'])
+@require_login
+def check_project_completion(project_id):
+    """Vérifier manuellement la complétion du projet"""
+    project = Project.query.get_or_404(project_id)
+    user = User.query.get(session['user_id'])
+    
+    if not can_manage_project(user, project):
+        return jsonify({'error': 'Accès non autorisé'}), 403
+    
+    try:
+        check_and_update_project_completion(project)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Statut du projet vérifié',
+            'project': project.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@projects_bp.route('/api/<int:project_id>/mark-complete', methods=['POST'])
+@require_login
+def mark_project_complete(project_id):
+    """Marquer manuellement un projet comme terminé"""
+    project = Project.query.get_or_404(project_id)
+    user = User.query.get(session['user_id'])
+    
+    if not can_manage_project(user, project):
+        return jsonify({'error': 'Accès non autorisé'}), 403
+    
+    try:
+        project.status = 'completed'
+        project.progress_percentage = 100
+        project.updated_at = datetime.utcnow()
+        
+        # Marquer toutes les tâches comme complétées
+        for task in project.tasks:
+            if task.status != 'completed':
+                task.status = 'completed'
+                task.progress_percentage = 100
+                task.completed_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        AuditLogger.log_action(
+            user.id,
+            'project_manually_completed',
+            'project',
+            project.id,
+            {}
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Projet marqué comme terminé',
+            'project': project.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 # ==================== API: CALENDRIER ====================
 
 @projects_bp.route('/api/calendar/events', methods=['GET'])

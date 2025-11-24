@@ -103,12 +103,21 @@ class Project(db.Model):
         return int((completed_tasks / len(self.tasks)) * 100)
     
     def to_dict(self):
+        """Conversion en dictionnaire avec statut enrichi"""
+        from datetime import date
+        
+        # Calculer si le projet est en retard
+        is_delayed = False
+        if self.end_date and date.today() > self.end_date and self.status != 'completed':
+            is_delayed = True
+        
         return {
             'id': self.id,
             'name': self.name,
             'description': self.description,
             'code': self.code,
             'status': self.status,
+            'is_delayed': is_delayed,  # Nouveau champ
             'priority': self.priority,
             'project_type': self.project_type,
             'visibility': self.visibility,
@@ -125,10 +134,10 @@ class Project(db.Model):
             'tags': self.get_tags(),
             'task_count': len(self.tasks),
             'member_count': len(self.members),
-            'created_at': self.created_at.isoformat()
+            'completed_tasks': sum(1 for t in self.tasks if t.status == 'completed'),
+            'created_at': self.created_at.isoformat(),
+            'days_remaining': (self.end_date - date.today()).days if self.end_date and date.today() <= self.end_date else 0
         }
-
-
 class ProjectTask(db.Model):
     """Tâche de projet"""
     

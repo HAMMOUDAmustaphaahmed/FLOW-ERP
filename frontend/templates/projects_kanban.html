@@ -4,7 +4,6 @@
 
 {% block extra_css %}
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/tickets.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 <style>
@@ -152,6 +151,125 @@
         flex-wrap: wrap;
     }
 </style>
+<style>
+    /* Dans votre style.css, modifier la section modals */
+.modal, .modal-overlay {
+    z-index: 9999 !important; /* Augmenter considérablement le z-index */
+}
+
+.modal-content, .modal-dialog {
+    z-index: 10000 !important;
+}
+    .project-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px 20px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+    }
+    
+    .project-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .stat-box {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    
+    .stat-box h3 {
+        font-size: 1.5rem;
+        margin: 0;
+    }
+    
+    .nav-tabs-custom {
+        border-bottom: 2px solid #e2e8f0;
+        margin-bottom: 20px;
+    }
+    
+    .nav-tabs-custom .nav-link {
+        border: none;
+        padding: 12px 20px;
+        color: #64748b;
+        font-weight: 600;
+        border-bottom: 3px solid transparent;
+    }
+    
+    .nav-tabs-custom .nav-link.active {
+        color: #667eea;
+        border-bottom-color: #667eea;
+        background: none;
+    }
+    
+    .tab-content {
+        min-height: 400px;
+    }
+    
+    .task-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        transition: all 0.2s;
+    }
+    
+    .task-item:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .priority-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .priority-critical { background: #dc3545; color: white; }
+    .priority-high { background: #fd7e14; color: white; }
+    .priority-normal { background: #0d6efd; color: white; }
+    .priority-low { background: #6c757d; color: white; }
+    
+    .status-badge {
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+    }
+    
+    .status-todo { background: #e7f3ff; color: #0d6efd; }
+    .status-in_progress { background: #fff3cd; color: #856404; }
+    .status-in_review { background: #d1ecf1; color: #0c5460; }
+    .status-completed { background: #d1f2eb; color: #198754; }
+    
+    .member-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #667eea;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+    }
+    
+    .progress-bar-custom {
+        height: 8px;
+        background: #e9ecef;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        transition: width 0.3s;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -166,9 +284,7 @@
             <button class="btn btn-outline-primary" onclick="window.location.href='/projects/all'">
                 <i class="fas fa-th"></i> Projets
             </button>
-            <button class="btn btn-outline-primary" onclick="window.location.href='/projects/gantt'">
-                <i class="fas fa-chart-gantt"></i> Gantt
-            </button>
+            
             <button class="btn btn-primary active">
                 <i class="fas fa-columns"></i> Kanban
             </button>
@@ -201,19 +317,7 @@
     <!-- Tableau Kanban -->
     <div class="kanban-board" id="kanbanBoard">
         <!-- Backlog -->
-        <div class="kanban-column column-backlog" data-column="backlog">
-            <div class="kanban-column-header">
-                <div class="kanban-column-title">
-                    <i class="fas fa-inbox"></i>
-                    Backlog
-                    <span class="kanban-column-count">0</span>
-                </div>
-            </div>
-            <div class="kanban-cards" data-column="backlog"></div>
-            <div class="add-card-btn" onclick="openTaskModal('backlog')">
-                <i class="fas fa-plus"></i> Nouvelle tâche
-            </div>
-        </div>
+        
         
         <!-- À faire -->
         <div class="kanban-column column-todo" data-column="todo">
@@ -364,27 +468,65 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadProjects() {
     try {
-        const response = await fetch('/projects/api/list?status=active');
+        console.log('=== CHARGEMENT PROJETS ===');
+        
+        // MODIFICATION: Retirer le filtre status ou utiliser un statut existant
+        const response = await fetch('/projects/api/list'); // Sans filtre de statut
+        
+        console.log('Statut réponse:', response.status, response.ok);
+        
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
+        }
+        
         const data = await response.json();
+        console.log('Données brutes reçues:', data);
         
         if (data.success) {
             const select = document.getElementById('projectFilter');
-            data.projects.forEach(project => {
-                select.add(new Option(project.name, project.id));
-            });
+            select.innerHTML = '<option value="">Sélectionner un projet...</option>';
             
-            if (data.projects.length > 0) {
+            console.log('Projets disponibles:', data.projects);
+            console.log('Debug info:', data.debug);
+            
+            if (data.projects && data.projects.length > 0) {
+                data.projects.forEach(project => {
+                    console.log('Ajout projet:', project.name, project.id, project.status);
+                    select.add(new Option(`${project.name} (${project.status})`, project.id));
+                });
+                
+                // Sélectionner automatiquement le premier projet
                 select.value = data.projects[0].id;
                 currentProjectId = data.projects[0].id;
-                loadKanbanData();
+                console.log('Projet sélectionné:', currentProjectId);
+                
+                await loadKanbanData();
+            } else {
+                currentProjectId = null;
+                console.warn('Aucun projet trouvé');
+                showNotification('Aucun projet trouvé. Créez un projet d\'abord.', 'warning');
+                
+                // Vider le tableau Kanban
+                renderKanban({
+                    backlog: [], todo: [], in_progress: [], in_review: [], completed: []
+                });
             }
+        } else {
+            console.error('Erreur API projets:', data.error);
+            showNotification('Erreur: ' + (data.error || 'Inconnue'), 'error');
         }
     } catch (error) {
-        console.error('Erreur:', error);
+        console.error('Erreur détaillée chargement projets:', error);
+        showNotification('Erreur de connexion au serveur: ' + error.message, 'error');
     }
 }
 
+
+let usersLoaded = false;
+
 async function loadUsers() {
+    if (usersLoaded) return;
+    
     try {
         const response = await fetch('/users/list');
         const data = await response.json();
@@ -393,15 +535,53 @@ async function loadUsers() {
             const select = document.getElementById('assignToSelect');
             const filterSelect = document.getElementById('assignedFilter');
             
+            select.innerHTML = '<option value="">Non assigné</option>';
+            filterSelect.innerHTML = '<option value="">Tous les membres</option>';
+            
             data.users.forEach(user => {
                 select.add(new Option(user.full_name || user.username, user.id));
                 filterSelect.add(new Option(user.full_name || user.username, user.id));
             });
+            
+            usersLoaded = true;
         }
     } catch (error) {
         console.error('Erreur:', error);
     }
 }
+
+// Fonction de débogage
+function debugCurrentState() {
+    console.log('=== DEBUG KANBAN ===');
+    console.log('currentProjectId:', currentProjectId);
+    console.log('projectFilter value:', document.getElementById('projectFilter').value);
+    console.log('====================');
+}
+
+// Appeler le debug au chargement et avant chaque action importante
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== INIT KANBAN ===');
+    taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+    loadProjects();
+    loadUsers();
+    setupDragAndDrop();
+    
+    // Debug périodique
+    setInterval(debugCurrentState, 10000);
+});
+
+document.getElementById('projectFilter').addEventListener('change', function() {
+    currentProjectId = this.value;
+    if (currentProjectId) {
+        loadKanbanData();
+    } else {
+        // Vider le tableau si aucun projet sélectionné
+        renderKanban({
+            backlog: [], todo: [], in_progress: [], in_review: [], completed: []
+        });
+    }
+});
+
 
 async function loadKanbanData() {
     const projectId = document.getElementById('projectFilter').value;
@@ -545,8 +725,15 @@ async function moveTask(taskId, targetColumn) {
 }
 
 function openTaskModal(column) {
+    // VÉRIFICATION CRITIQUE : s'assurer qu'un projet est sélectionné
+    if (!currentProjectId) {
+        showNotification('Veuillez sélectionner un projet d\'abord', 'error');
+        return;
+    }
+    
     document.getElementById('taskColumn').value = column;
     document.getElementById('taskForm').reset();
+    delete document.getElementById('taskForm').dataset.taskId; // Reset mode édition
     taskModal.show();
 }
 
@@ -580,6 +767,12 @@ async function saveTask() {
     const formData = new FormData(form);
     const data = Object.fromEntries(formData.entries());
     
+    // Vérification supplémentaire
+    if (!currentProjectId) {
+        showNotification('Aucun projet sélectionné', 'error');
+        return;
+    }
+    
     if (!data.title) {
         showNotification('Le titre est requis', 'warning');
         return;
@@ -593,10 +786,16 @@ async function saveTask() {
             url = `/projects/api/tasks/${form.dataset.taskId}`;
             method = 'PUT';
         } else {
-            // Mode création
+            // Mode création - VÉRIFIER currentProjectId
+            if (!currentProjectId) {
+                showNotification('Projet non sélectionné', 'error');
+                return;
+            }
             url = `/projects/api/${currentProjectId}/tasks`;
             method = 'POST';
         }
+        
+        console.log('Envoi requête:', { url, method, data }); // Debug
         
         const response = await fetch(url, {
             method: method,
@@ -612,11 +811,11 @@ async function saveTask() {
             loadKanbanData();
             delete form.dataset.taskId;
         } else {
-            showNotification('Erreur: ' + result.error, 'error');
+            showNotification('Erreur: ' + (result.error || 'Inconnue'), 'error');
         }
     } catch (error) {
-        console.error('Erreur:', error);
-        showNotification('Erreur de connexion', 'error');
+        console.error('Erreur détaillée:', error);
+        showNotification('Erreur de connexion: ' + error.message, 'error');
     }
 }
 

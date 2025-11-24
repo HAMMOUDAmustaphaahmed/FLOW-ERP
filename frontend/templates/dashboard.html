@@ -1,1671 +1,1961 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard Analytics - FlowERP{% endblock %}
+{% block title %}Dashboard - FlowERP{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@7.3.0/dist/gridstack.min.css">
 <style>
-.dashboard-container {
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 2rem;
+:root {
+    --primary: #3b82f6;
+    --primary-dark: #2563eb;
+    --primary-light: #dbeafe;
+    --secondary: #8b5cf6;
+    --accent: #06b6d4;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --dark: #1f2937;
+    --darker: #111827;
+    --light: #f8fafc;
+    --lighter: #f1f5f9;
+    --border: #e2e8f0;
+    --border-light: #f1f5f9;
+    --text: #374151;
+    --text-light: #6b7280;
+    --text-lighter: #9ca3af;
+    
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    
+    --radius: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-xl: 1rem;
 }
 
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    min-height: 100vh;
+    color: var(--text);
+    line-height: 1.6;
+}
+
+.dashboard-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ==================== HEADER ==================== */
 .dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-}
-
-.dashboard-title {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    color: var(--text-primary);
-}
-
-.dashboard-subtitle {
-    color: var(--text-secondary);
-    font-size: 1rem;
-}
-
-.header-actions {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-}
-
-/* Filtres temporels */
-.time-filters {
-    background: var(--bg-primary);
-    border-radius: var(--border-radius-lg);
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-    box-shadow: var(--shadow-md);
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.time-filter-group {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.time-filter-btn {
-    padding: 0.5rem 1rem;
-    border: 2px solid var(--border-color);
-    background: var(--bg-primary);
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-    font-weight: 500;
-}
-
-.time-filter-btn.active {
-    background: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
     color: white;
-    border-color: var(--primary-color);
-}
-
-.time-filter-btn:hover:not(.active) {
-    border-color: var(--primary-color);
-    background: var(--bg-tertiary);
-}
-
-.custom-date-range {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-.custom-date-range input[type="date"] {
-    padding: 0.5rem;
-    border: 2px solid var(--border-color);
-    border-radius: var(--border-radius);
-    font-size: 0.9rem;
-}
-
-.department-filter {
-    margin-left: auto;
-}
-
-.department-filter select {
-    padding: 0.5rem 1rem;
-    border: 2px solid var(--border-color);
-    border-radius: var(--border-radius);
-    background: var(--bg-primary);
-    cursor: pointer;
-    min-width: 200px;
-}
-
-/* KPIs Grid */
-.kpis-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.kpi-card {
-    background: var(--bg-primary);
-    border-radius: var(--border-radius-lg);
-    padding: 1.5rem;
-    box-shadow: var(--shadow-md);
-    transition: transform var(--transition-fast);
+    padding: 2rem 0;
+    box-shadow: var(--shadow-lg);
     position: relative;
     overflow: hidden;
 }
 
-.kpi-card::before {
+.dashboard-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 100" fill="rgba(255,255,255,0.05)"><polygon points="0,0 1000,50 1000,100 0,100"/></svg>') no-repeat;
+    background-size: cover;
+}
+
+.header-content {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    position: relative;
+    z-index: 2;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.header-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.header-title-content h1 {
+    font-size: 2.25rem;
+    font-weight: 800;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    background: linear-gradient(135deg, #fff 0%, #e0f2fe 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.header-title-content .welcome-text {
+    display: block;
+    font-size: 1rem;
+    opacity: 0.9;
+    margin-top: 0.5rem;
+    font-weight: 500;
+}
+
+.header-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+/* Modern Button Styles */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--radius);
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn:hover::before {
+    left: 100%;
+}
+
+.btn-primary {
+    background: white;
+    color: var(--primary);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-secondary {
+    background: rgba(255,255,255,0.15);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    backdrop-filter: blur(10px);
+}
+
+.btn-secondary:hover {
+    background: rgba(255,255,255,0.25);
+    transform: translateY(-1px);
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* Header Stats Grid */
+.header-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.25rem;
+}
+
+.stat-card {
+    background: rgba(255,255,255,0.15);
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.2);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--secondary));
+}
+
+.stat-card:hover {
+    background: rgba(255,255,255,0.2);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.stat-value {
+    font-size: 2.25rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+/* ==================== MAIN CONTENT ==================== */
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 2rem;
+    flex: 1;
+}
+
+/* Modern Toolbar */
+.toolbar {
+    background: white;
+    padding: 1.5rem;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    margin-bottom: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: center;
+    border: 1px solid var(--border-light);
+}
+
+.toolbar-group {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.toolbar-label {
+    font-weight: 600;
+    color: var(--dark);
+    font-size: 0.875rem;
+    min-width: 100px;
+}
+
+.toolbar-control {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 150px;
+    font-weight: 500;
+}
+
+.toolbar-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.date-range {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.date-range input {
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.date-range input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.toolbar-spacer {
+    flex: 1;
+}
+
+/* ==================== WIDGETS GRID ==================== */
+.widgets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.widget-card {
+    background: white;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    min-height: 320px;
+    border: 1px solid var(--border-light);
+}
+
+.widget-card::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     height: 4px;
-    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
-.kpi-card:hover {
+.widget-card:hover {
+    box-shadow: var(--shadow-xl);
+    transform: translateY(-6px);
+    border-color: var(--primary-light);
+}
+
+.widget-card:hover::before {
+    opacity: 1;
+}
+
+.widget-card.fullwidth {
+    grid-column: 1 / -1;
+}
+
+/* Widget Header */
+.widget-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-light);
+    background: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+    transition: background-color 0.2s ease;
+}
+
+.widget-header:hover {
+    background: var(--lighter);
+}
+
+.widget-title-section {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.widget-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary-light), #e0f2fe);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.widget-title-content {
+    min-width: 0;
+}
+
+.widget-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.widget-meta {
+    font-size: 0.75rem;
+    color: var(--text-lighter);
+    margin-top: 0.125rem;
+    font-weight: 500;
+}
+
+.widget-controls {
+    display: flex;
+    gap: 0.375rem;
+}
+
+.widget-btn {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    border-radius: 8px;
+    color: var(--text-light);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.widget-btn:hover {
+    background: var(--lighter);
+    color: var(--primary);
+    transform: scale(1.1);
+}
+
+.widget-btn.delete:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--error);
+}
+
+/* Widget Body */
+.widget-body {
+    flex: 1;
+    padding: 1.5rem;
+    overflow: auto;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #fafbfc 0%, #ffffff 100%);
+}
+
+/* KPI Widget Styling */
+.kpi-content {
+    text-align: center;
+    width: 100%;
+    padding: 1rem;
+}
+
+.kpi-value {
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1;
+    margin-bottom: 0.75rem;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.kpi-label {
+    font-size: 1rem;
+    color: var(--text);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.kpi-sublabel {
+    font-size: 0.875rem;
+    color: var(--text-light);
+    margin-bottom: 1.25rem;
+}
+
+.kpi-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    backdrop-filter: blur(10px);
+}
+
+.kpi-badge.positive {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.kpi-badge.negative {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--error);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Chart Container */
+.chart-wrapper {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.chart-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-lighter);
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.chart-placeholder i {
+    font-size: 3rem;
+    opacity: 0.5;
+}
+
+/* ==================== MODAL ==================== */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(15, 23, 42, 0.6);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.3s ease;
+    padding: 1rem;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: var(--radius-xl);
+    width: 100%;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-2xl);
+    animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--border-light);
+}
+
+.modal-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.modal-close {
+    background: var(--lighter);
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-size: 1.25rem;
+}
+
+.modal-close:hover {
+    background: var(--error);
+    color: white;
+    transform: rotate(90deg);
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.modal-footer {
+    padding: 1.5rem 2rem;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    background: var(--lighter);
+    position: sticky;
+    bottom: 0;
+}
+
+/* ==================== FORM STYLES ==================== */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    background: white;
+    color: var(--text);
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.form-hint {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-top: 0.5rem;
+}
+
+/* ==================== TEMPLATES GRID ==================== */
+.templates-section {
+    margin-bottom: 2rem;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.templates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+}
+
+.template-card {
+    border: 2px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem 1rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: center;
+    background: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.template-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.template-card:hover {
+    border-color: var(--primary);
+    background: var(--primary-light);
     transform: translateY(-4px);
     box-shadow: var(--shadow-lg);
 }
 
-.kpi-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
+.template-card:hover::before {
+    transform: scaleX(1);
 }
 
-.kpi-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: var(--border-radius-lg);
+.template-card.selected {
+    border-color: var(--success);
+    background: #ecfdf5;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+.template-card.selected::before {
+    transform: scaleX(1);
+    background: var(--success);
+}
+
+.template-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 0.75rem;
+    background: linear-gradient(135deg, var(--primary-light), #e0f2fe);
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
+    color: var(--primary);
     font-size: 1.5rem;
-    color: white;
 }
 
-.kpi-icon.blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
-.kpi-icon.green { background: linear-gradient(135deg, #10b981, #059669); }
-.kpi-icon.purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
-.kpi-icon.orange { background: linear-gradient(135deg, #f59e0b, #d97706); }
-.kpi-icon.pink { background: linear-gradient(135deg, #ec4899, #db2777); }
-.kpi-icon.teal { background: linear-gradient(135deg, #14b8a6, #0d9488); }
-
-.kpi-menu {
-    position: relative;
-}
-
-.kpi-menu-btn {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 0.5rem;
-    border-radius: var(--border-radius);
-    transition: all var(--transition-fast);
-}
-
-.kpi-menu-btn:hover {
-    background: var(--bg-tertiary);
-}
-
-.kpi-label {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    text-transform: uppercase;
+.template-name {
     font-weight: 600;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.5rem;
+    color: var(--dark);
+    font-size: 0.875rem;
 }
 
-.kpi-value {
+/* ==================== EMPTY STATE ==================== */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-light);
+}
+
+.empty-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
+    background: linear-gradient(135deg, var(--lighter), var(--border-light));
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-lighter);
     font-size: 2.5rem;
+}
+
+.empty-title {
+    font-size: 1.5rem;
     font-weight: 700;
-    color: var(--text-primary);
+    color: var(--dark);
     margin-bottom: 0.5rem;
-    line-height: 1;
 }
 
-.kpi-comparison {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.875rem;
-}
-
-.kpi-change {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: var(--border-radius);
-    font-weight: 600;
-}
-
-.kpi-change.positive {
-    background: rgba(16, 185, 129, 0.1);
-    color: #059669;
-}
-
-.kpi-change.negative {
-    background: rgba(239, 68, 68, 0.1);
-    color: #dc2626;
-}
-
-.kpi-period {
-    color: var(--text-secondary);
-}
-
-.kpi-sparkline {
-    margin-top: 1rem;
-    height: 40px;
-}
-
-/* Charts Section */
-.charts-section {
-    display: grid;
-    grid-template-columns: repeat(12, 1fr);
-    gap: 1.5rem;
+.empty-text {
+    color: var(--text-light);
     margin-bottom: 2rem;
+    font-size: 1rem;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-.chart-card {
-    background: var(--bg-primary);
-    border-radius: var(--border-radius-lg);
-    padding: 1.5rem;
-    box-shadow: var(--shadow-md);
-}
-
-.chart-card.full {
-    grid-column: span 12;
-}
-
-.chart-card.half {
-    grid-column: span 6;
-}
-
-.chart-card.third {
-    grid-column: span 4;
-}
-
-@media (max-width: 1024px) {
-    .chart-card.half,
-    .chart-card.third {
-        grid-column: span 12;
-    }
-}
-
-.chart-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-}
-
-.chart-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.chart-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.chart-action-btn {
-    padding: 0.5rem;
-    border: none;
-    background: var(--bg-tertiary);
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    color: var(--text-secondary);
-    transition: all var(--transition-fast);
-}
-
-.chart-action-btn:hover {
-    background: var(--primary-color);
-    color: white;
-}
-
-.chart-container {
-    position: relative;
-    height: 300px;
-}
-
-.chart-container.tall {
-    height: 400px;
-}
-
-/* Prédictions */
-.prediction-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: var(--border-radius-lg);
-    padding: 2rem;
-    box-shadow: var(--shadow-md);
-    grid-column: span 12;
-}
-
-.prediction-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.prediction-icon {
-    font-size: 2.5rem;
-}
-
-.prediction-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-}
-
-.prediction-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
-}
-
-.prediction-item {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    padding: 1.5rem;
-    border-radius: var(--border-radius);
-}
-
-.prediction-label {
-    font-size: 0.875rem;
-    opacity: 0.9;
-    margin-bottom: 0.5rem;
-}
-
-.prediction-value {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-}
-
-.prediction-confidence {
-    font-size: 0.875rem;
-    opacity: 0.8;
-}
-
-/* Table comparative */
-.comparison-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.comparison-table thead {
-    background: var(--bg-tertiary);
-}
-
-.comparison-table th {
-    padding: 1rem;
-    text-align: left;
-    font-weight: 600;
-    color: var(--text-primary);
-    border-bottom: 2px solid var(--border-color);
-}
-
-.comparison-table td {
-    padding: 1rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.comparison-table tbody tr:hover {
-    background: var(--bg-tertiary);
-}
-
-.trend-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: var(--border-radius);
-    font-size: 0.875rem;
-    font-weight: 600;
-}
-
-.trend-indicator.up {
-    background: rgba(16, 185, 129, 0.1);
-    color: #059669;
-}
-
-.trend-indicator.down {
-    background: rgba(239, 68, 68, 0.1);
-    color: #dc2626;
-}
-
-.trend-indicator.stable {
-    background: rgba(107, 114, 128, 0.1);
-    color: #6b7280;
-}
-
-/* Export Modal */
-.export-modal {
+/* ==================== LOADING ==================== */
+.loading-spinner {
     display: none;
     position: fixed;
-    z-index: 1000;
-    left: 0;
     top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(6px);
-}
-
-.export-modal.active {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.export-modal-content {
-    background: var(--bg-primary);
-    border-radius: var(--border-radius-lg);
-    width: 90%;
-    max-width: 600px;
-    padding: 2rem;
-    box-shadow: var(--shadow-xl);
-}
-
-.export-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-}
-
-.export-modal-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-}
-
-.export-options {
-    display: grid;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.export-option {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    border: 2px solid var(--border-color);
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-
-.export-option:hover {
-    border-color: var(--primary-color);
-    background: var(--bg-tertiary);
-}
-
-.export-option input[type="checkbox"] {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-}
-
-.export-format {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.format-btn {
-    padding: 1rem;
-    border: 2px solid var(--border-color);
-    background: var(--bg-primary);
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    text-align: center;
-    transition: all var(--transition-fast);
-}
-
-.format-btn:hover {
-    border-color: var(--primary-color);
-    background: var(--bg-tertiary);
-}
-
-.format-btn.selected {
-    border-color: var(--primary-color);
-    background: var(--primary-color);
-    color: white;
-}
-
-.format-icon {
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-}
-
-.loading-overlay {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(15, 23, 42, 0.8);
     z-index: 2000;
     align-items: center;
     justify-content: center;
+    flex-direction: column;
+    gap: 1.5rem;
+    backdrop-filter: blur(8px);
 }
 
-.loading-overlay.active {
+.loading-spinner.active {
     display: flex;
 }
 
-.loading-content {
-    text-align: center;
-    color: white;
-}
-
-.loading-spinner {
-    width: 60px;
-    height: 60px;
-    border: 4px solid rgba(255, 255, 255, 0.3);
+.spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid rgba(255,255,255,0.3);
     border-top-color: white;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-    margin: 0 auto 1rem;
+}
+
+.loading-text {
+    color: white;
+    font-weight: 600;
+    font-size: 1.125rem;
+}
+
+/* ==================== NOTIFICATIONS ==================== */
+.notification {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    z-index: 3000;
+    animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: white;
+    font-weight: 600;
+    max-width: 400px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.notification.success {
+    background: linear-gradient(135deg, var(--success), #059669);
+}
+
+.notification.error {
+    background: linear-gradient(135deg, var(--error), #dc2626);
+}
+
+.notification.info {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+}
+
+.notification.warning {
+    background: linear-gradient(135deg, var(--warning), #d97706);
+}
+
+.notification-icon {
+    font-size: 1.25rem;
+}
+
+/* ==================== ANIMATIONS ==================== */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px) scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
 
-.btn-export {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    font-weight: 600;
-    transition: all var(--transition-fast);
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 1024px) {
+    .widgets-grid {
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    }
+    
+    .header-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
 }
 
-.btn-export:hover {
-    background: var(--primary-hover);
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 1rem;
+    }
+    
+    .header-content {
+        padding: 0 1rem;
+    }
+    
+    .header-top {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1.5rem;
+    }
+    
+    .header-title-content h1 {
+        font-size: 1.75rem;
+    }
+    
+    .header-actions {
+        justify-content: stretch;
+    }
+    
+    .btn {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .toolbar-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .toolbar-label {
+        width: 100%;
+    }
+    
+    .toolbar-control {
+        width: 100%;
+    }
+    
+    .widgets-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .templates-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .modal-content {
+        margin: 1rem;
+        max-height: calc(100vh - 2rem);
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .header-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .templates-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .notification {
+        top: 1rem;
+        right: 1rem;
+        left: 1rem;
+        max-width: none;
+    }
+    
+    .modal-header,
+    .modal-footer {
+        padding: 1.25rem;
+    }
+}
+
+/* ==================== UTILITY CLASSES ==================== */
+.text-gradient {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.glass-effect {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    box-shadow: var(--shadow-lg);
 }
 
-.btn-secondary {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
 }
 
-.btn-secondary:hover {
-    background: var(--bg-secondary);
+/* Focus styles for accessibility */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Selection color */
+::selection {
+    background: rgba(59, 130, 246, 0.2);
 }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
+<div class="dashboard-wrapper">
     <!-- Header -->
     <div class="dashboard-header">
-        <div>
-            <h1 class="dashboard-title">
-                Bienvenue, {{ current_user.first_name or current_user.username }} 👋
-            </h1>
-            <p class="dashboard-subtitle">Analytics et rapports en temps réel</p>
-        </div>
-        <div class="header-actions">
-            <button class="btn-export btn-secondary" onclick="toggleDashboardSettings()">
-                <i class="fas fa-cog"></i> Personnaliser
-            </button>
-            <button class="btn-export" onclick="openExportModal()">
-                <i class="fas fa-download"></i> Exporter
-            </button>
+        <div class="header-content">
+            <div class="header-top">
+                <div class="header-title">
+                    <div>
+                        <h2><i class="fas fa-tachometer-alt"></i>  Dashboard</h2>
+                        <small>Bienvenue {{ current_user.first_name or current_user.username }}</small>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" onclick="toggleEditMode()" id="editModeBtn">
+                        <i class="fas fa-edit"></i>
+                        <span id="editText">Mode Édition</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="saveLayout()" id="saveBtn" style="display:none;">
+                        <i class="fas fa-save"></i> Sauvegarder
+                    </button>
+                    <button class="btn btn-primary" onclick="openAddWidget()">
+                        <i class="fas fa-plus"></i> Ajouter Widget
+                    </button>
+                </div>
+            </div>
+
+            <!-- Global Stats -->
+            <div class="header-stats" id="globalStats">
+                <div class="stat-box">
+                    <div class="stat-number" id="statDepts">0</div>
+                    <div class="stat-label">Départements</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="statEmps">0</div>
+                    <div class="stat-label">Employés</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="statProjects">0</div>
+                    <div class="stat-label">Projets Actifs</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="statTickets">0</div>
+                    <div class="stat-label">Tickets Ouverts</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="statTables">0</div>
+                    <div class="stat-label">Tables</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-number" id="statEntries">0</div>
+                    <div class="stat-label">Entrées</div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Filtres temporels -->
-    <div class="time-filters">
-        <div class="time-filter-group">
-            <button class="time-filter-btn" onclick="setTimeFilter('today')">Aujourd'hui</button>
-            <button class="time-filter-btn active" onclick="setTimeFilter('week')">7 jours</button>
-            <button class="time-filter-btn" onclick="setTimeFilter('month')">30 jours</button>
-            <button class="time-filter-btn" onclick="setTimeFilter('quarter')">90 jours</button>
-            <button class="time-filter-btn" onclick="setTimeFilter('year')">1 an</button>
-        </div>
-        
-        <div class="custom-date-range">
-            <span>Ou:</span>
-            <input type="date" id="startDate" onchange="applyCustomDateRange()">
-            <span>à</span>
-            <input type="date" id="endDate" onchange="applyCustomDateRange()">
-        </div>
+    <!-- Main Container -->
+    <div class="dashboard-container">
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="toolbar-group">
+                <label class="toolbar-label">📅 Période:</label>
+                <select class="toolbar-control" id="timeFilter" onchange="refreshAllWidgets()">
+                    <option value="today">Aujourd'hui</option>
+                    <option value="week" selected>7 jours</option>
+                    <option value="month">30 jours</option>
+                    <option value="quarter">90 jours</option>
+                    <option value="year">1 an</option>
+                    <option value="custom">Personnalisé</option>
+                </select>
+            </div>
 
-        <div class="department-filter">
-            <select id="departmentFilter" onchange="filterByDepartment()">
-                <option value="">Tous les départements</option>
-            </select>
-        </div>
-    </div>
+            <div class="toolbar-group" id="customDateGroup" style="display:none;">
+                <div class="date-range">
+                    <input type="date" id="startDate" />
+                    <span>à</span>
+                    <input type="date" id="endDate" />
+                    <button class="btn btn-secondary" onclick="applyCustomDate()" style="white-space:nowrap;">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </div>
+            </div>
 
-    <!-- KPIs Grid -->
-    <div class="kpis-grid" id="kpisGrid">
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div class="kpi-icon blue">
-                    <i class="fas fa-building"></i>
-                </div>
-                <div class="kpi-menu">
-                    <button class="kpi-menu-btn">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </button>
-                </div>
+            {% if current_user.is_admin or current_user.role == 'directeur_rh' %}
+            <div class="toolbar-group">
+                <label class="toolbar-label">🏢 Département:</label>
+                <select class="toolbar-control" id="departmentFilter" onchange="refreshAllWidgets()">
+                    <option value="">Tous les départements</option>
+                </select>
             </div>
-            <div class="kpi-label">Départements Actifs</div>
-            <div class="kpi-value" id="kpi-departments">0</div>
-            <div class="kpi-comparison">
-                <span class="kpi-change positive">
-                    <i class="fas fa-arrow-up"></i> +12%
-                </span>
-                <span class="kpi-period">vs période précédente</span>
-            </div>
-            <canvas id="sparkline-departments" class="kpi-sparkline"></canvas>
-        </div>
+            {% endif %}
 
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div class="kpi-icon green">
-                    <i class="fas fa-users"></i>
-                </div>
-                <div class="kpi-menu">
-                    <button class="kpi-menu-btn">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="kpi-label">Employés</div>
-            <div class="kpi-value" id="kpi-employees">0</div>
-            <div class="kpi-comparison">
-                <span class="kpi-change positive">
-                    <i class="fas fa-arrow-up"></i> +8%
-                </span>
-                <span class="kpi-period">vs période précédente</span>
-            </div>
-            <canvas id="sparkline-employees" class="kpi-sparkline"></canvas>
-        </div>
+            <div class="toolbar-spacer"></div>
 
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div class="kpi-icon purple">
-                    <i class="fas fa-cube"></i>
-                </div>
-                <div class="kpi-menu">
-                    <button class="kpi-menu-btn">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="kpi-label">Blocs Blockchain</div>
-            <div class="kpi-value" id="kpi-blocks">0</div>
-            <div class="kpi-comparison">
-                <span class="kpi-change positive">
-                    <i class="fas fa-arrow-up"></i> +156
-                </span>
-                <span class="kpi-period">nouveaux blocs</span>
-            </div>
-            <canvas id="sparkline-blocks" class="kpi-sparkline"></canvas>
-        </div>
-
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div class="kpi-icon orange">
-                    <i class="fas fa-exchange-alt"></i>
-                </div>
-                <div class="kpi-menu">
-                    <button class="kpi-menu-btn">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="kpi-label">Transactions</div>
-            <div class="kpi-value" id="kpi-transactions">0</div>
-            <div class="kpi-comparison">
-                <span class="kpi-change positive">
-                    <i class="fas fa-arrow-up"></i> +24%
-                </span>
-                <span class="kpi-period">vs période précédente</span>
-            </div>
-            <canvas id="sparkline-transactions" class="kpi-sparkline"></canvas>
-        </div>
-
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div class="kpi-icon pink">
-                    <i class="fas fa-table"></i>
-                </div>
-                <div class="kpi-menu">
-                    <button class="kpi-menu-btn">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="kpi-label">Tables Personnalisées</div>
-            <div class="kpi-value" id="kpi-tables">0</div>
-            <div class="kpi-comparison">
-                <span class="kpi-change positive">
-                    <i class="fas fa-arrow-up"></i> +3
-                </span>
-                <span class="kpi-period">ce mois</span>
-            </div>
-            <canvas id="sparkline-tables" class="kpi-sparkline"></canvas>
-        </div>
-
-        <div class="kpi-card">
-            <div class="kpi-header">
-                <div class="kpi-icon teal">
-                    <i class="fas fa-database"></i>
-                </div>
-                <div class="kpi-menu">
-                    <button class="kpi-menu-btn">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="kpi-label">Entrées Totales</div>
-            <div class="kpi-value" id="kpi-entries">0</div>
-            <div class="kpi-comparison">
-                <span class="kpi-change positive">
-                    <i class="fas fa-arrow-up"></i> +186
-                </span>
-                <span class="kpi-period">cette semaine</span>
-            </div>
-            <canvas id="sparkline-entries" class="kpi-sparkline"></canvas>
-        </div>
-    </div>
-
-    <!-- Charts Section -->
-    <div class="charts-section">
-        <!-- Graphique principal -->
-        <div class="chart-card full">
-            <div class="chart-header">
-                <h3 class="chart-title">Activité Globale</h3>
-                <div class="chart-actions">
-                    <select id="mainChartType" onchange="updateMainChart()">
-                        <option value="line">Lignes</option>
-                        <option value="bar">Barres</option>
-                        <option value="area">Aires</option>
-                    </select>
-                    <button class="chart-action-btn" onclick="refreshChart('main')" title="Rafraîchir">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                    <button class="chart-action-btn" onclick="fullscreenChart('main')" title="Plein écran">
-                        <i class="fas fa-expand"></i>
-                    </button>
-                    <button class="chart-action-btn" onclick="downloadChart('main')" title="Télécharger">
-                        <i class="fas fa-download"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="chart-container tall">
-                <canvas id="mainChart"></canvas>
+            <div class="toolbar-group">
+                <button class="btn btn-secondary" onclick="refreshAllWidgets()">
+                    <i class="fas fa-sync-alt"></i> Actualiser
+                </button>
+                <button class="btn btn-secondary" onclick="exportToPDF()">
+                    <i class="fas fa-download"></i> Exporter
+                </button>
             </div>
         </div>
 
-        <!-- Graphique par département -->
-        <div class="chart-card half">
-            <div class="chart-header">
-                <h3 class="chart-title">Performance par Département</h3>
-                <div class="chart-actions">
-                    <button class="chart-action-btn" onclick="refreshChart('department')">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                    <button class="chart-action-btn" onclick="downloadChart('department')">
-                        <i class="fas fa-download"></i>
-                    </button>
-                </div>
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Widgets Grid -->
+            <div class="widgets-grid" id="widgetsGrid">
+                <!-- Widgets loaded here -->
             </div>
-            <div class="chart-container">
-                <canvas id="departmentChart"></canvas>
-            </div>
-        </div>
 
-        <!-- Graphique blockchain -->
-        <div class="chart-card half">
-            <div class="chart-header">
-                <h3 class="chart-title">Activité Blockchain</h3>
-                <div class="chart-actions">
-                    <button class="chart-action-btn" onclick="refreshChart('blockchain')">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                    <button class="chart-action-btn" onclick="downloadChart('blockchain')">
-                        <i class="fas fa-download"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="chart-container">
-                <canvas id="blockchainChart"></canvas>
-            </div>
-        </div>
-
-        <!-- Comparaison période -->
-        <div class="chart-card full">
-            <div class="chart-header">
-                <h3 class="chart-title">Comparaison Période sur Période</h3>
-                <div class="chart-actions">
-                    <select id="comparisonMetric">
-                        <option value="transactions">Transactions</option>
-                        <option value="users">Utilisateurs</option>
-                        <option value="departments">Départements</option>
-                        <option value="tables">Tables</option>
-                    </select>
-                    <button class="chart-action-btn" onclick="updateComparison()">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                </div>
-            </div>
-            <div style="overflow-x: auto;">
-                <table class="comparison-table">
-                    <thead>
-                        <tr>
-                            <th>Métrique</th>
-                            <th>Période Actuelle</th>
-                            <th>Période Précédente</th>
-                            <th>Évolution</th>
-                            <th>Tendance</th>
-                        </tr>
-                    </thead>
-                    <tbody id="comparisonTableBody">
-                        <!-- Données injectées par JS -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Prédictions -->
-        <div class="prediction-card">
-            <div class="prediction-header">
-                <div class="prediction-icon">
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state" style="display:none;">
+                <div class="empty-icon">
                     <i class="fas fa-chart-line"></i>
                 </div>
-                <div>
-                    <h3 class="prediction-title">Prédictions Basées sur l'IA</h3>
-                    <p>Projections pour les 30 prochains jours</p>
-                </div>
-            </div>
-            <div class="prediction-grid">
-                <div class="prediction-item">
-                    <div class="prediction-label">Nouvelles Transactions</div>
-                    <div class="prediction-value" id="pred-transactions">~450</div>
-                    <div class="prediction-confidence">Confiance: 87%</div>
-                </div>
-                <div class="prediction-item">
-                    <div class="prediction-label">Nouveaux Employés</div>
-                    <div class="prediction-value" id="pred-employees">~12</div>
-                    <div class="prediction-confidence">Confiance: 82%</div>
-                </div>
-                <div class="prediction-item">
-                    <div class="prediction-label">Activité Blockchain</div>
-                    <div class="prediction-value" id="pred-blocks">~280</div>
-                    <div class="prediction-confidence">Confiance: 91%</div>
-                </div>
-                <div class="prediction-item">
-                    <div class="prediction-label">Croissance Globale</div>
-                    <div class="prediction-value" id="pred-growth">+18%</div>
-                    <div class="prediction-confidence">Confiance: 85%</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Top départements -->
-        <div class="chart-card half">
-            <div class="chart-header">
-                <h3 class="chart-title">Top 5 Départements</h3>
-                <div class="chart-actions">
-                    <button class="chart-action-btn" onclick="refreshChart('topDept')">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="chart-container">
-                <canvas id="topDepartmentsChart"></canvas>
-            </div>
-        </div>
-
-        <!-- Distribution utilisateurs -->
-        <div class="chart-card half">
-            <div class="chart-header">
-                <h3 class="chart-title">Distribution des Rôles</h3>
-                <div class="chart-actions">
-                    <button class="chart-action-btn" onclick="refreshChart('roles')">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="chart-container">
-                <canvas id="rolesChart"></canvas>
+                <h2 class="empty-title">Aucun Widget</h2>
+                <p class="empty-text">Créez votre premier widget pour commencer l'analyse</p>
+                <button class="btn btn-primary" onclick="openAddWidget()">
+                    <i class="fas fa-plus"></i> Créer un Widget
+                </button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal Export -->
-<div id="exportModal" class="export-modal">
-    <div class="export-modal-content">
-        <div class="export-modal-header">
-            <h2 class="export-modal-title">Exporter le Rapport</h2>
-            <button class="modal-close" onclick="closeExportModal()">×</button>
+<!-- ==================== MODALS ==================== -->
+
+<!-- Add Widget Modal -->
+<div id="addWidgetModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">➕ Ajouter un Widget</h2>
+            <button class="modal-close" onclick="closeModal('addWidgetModal')">×</button>
         </div>
-
-        <div class="export-options">
-            <label class="export-option">
-                <input type="checkbox" checked id="export-kpis">
-                <div>
-                    <strong>KPIs et Métriques</strong>
-                    <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary);">Indicateurs de performance</p>
+        <div class="modal-body">
+            <div id="templatesStep">
+                <h3 style="margin-bottom: 1.5rem; color: var(--dark); font-weight: 600;">Choisir un template:</h3>
+                <div class="templates-grid" id="templatesGrid">
+                    <!-- Templates loaded here -->
                 </div>
-            </label>
+            </div>
 
-            <label class="export-option">
-                <input type="checkbox" checked id="export-charts">
-                <div>
-                    <strong>Graphiques</strong>
-                    <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary);">Tous les graphiques visuels</p>
-                </div>
-            </label>
+            <div id="configStep" style="display:none;">
+                <h3 style="margin-bottom: 1.5rem; color: var(--dark); font-weight: 600;">⚙️ Configuration:</h3>
 
-            <label class="export-option">
-                <input type="checkbox" checked id="export-comparison">
-                <div>
-                    <strong>Comparaisons</strong>
-                    <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary);">Données comparatives</p>
+                <div class="form-group">
+                    <label class="form-label">Titre du Widget <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="widgetTitle" placeholder="Ex: Employés par département">
                 </div>
-            </label>
 
-            <label class="export-option">
-                <input type="checkbox" id="export-predictions">
-                <div>
-                    <strong>Prédictions</strong>
-                    <p style="margin: 0; font-size: 0.875rem; color: var(--text-secondary);">Projections futures</p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Source de Données <span class="required">*</span></label>
+                        <select class="form-select" id="widgetSource" onchange="updateMetrics()">
+                            <option value="">Sélectionner...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Métrique <span class="required">*</span></label>
+                        <select class="form-select" id="widgetMetric">
+                            <option value="">Sélectionner...</option>
+                        </select>
+                    </div>
                 </div>
-            </label>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Type de Graphique <span class="required">*</span></label>
+                        <select class="form-select" id="widgetChart">
+                            <option value="bar">📊 Barres</option>
+                            <option value="line">📈 Lignes</option>
+                            <option value="pie">🥧 Camembert</option>
+                            <option value="doughnut">🍩 Anneau</option>
+                            <option value="radar">🎯 Radar</option>
+                            <option value="polarArea">❄️ Aire Polaire</option>
+                            <option value="area">📉 Aire</option>
+                            <option value="scatter">⚡ Scatter</option>
+                            <option value="bubble">🔵 Bubble</option>
+                            <option value="number">🔢 Nombre</option>
+                            <option value="gauge">⏱️ Jauge</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Taille <span class="required">*</span></label>
+                        <select class="form-select" id="widgetSize">
+                            <option value="1x1">Petite (1x1)</option>
+                            <option value="2x1" selected>Moyenne (2x1)</option>
+                            <option value="2x2">Grande (2x2)</option>
+                            <option value="4x2">Extra Large (4x2)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Couleur <span class="required">*</span></label>
+                        <select class="form-select" id="widgetColor">
+                            <option value="blue">🔵 Bleu</option>
+                            <option value="green">🟢 Vert</option>
+                            <option value="orange">🟠 Orange</option>
+                            <option value="purple">🟣 Violet</option>
+                            <option value="red">🔴 Rouge</option>
+                            <option value="pink">🩷 Rose</option>
+                            <option value="cyan">💎 Cyan</option>
+                        </select>
+                    </div>
+
+                    {% if current_user.is_admin or current_user.role == 'directeur_rh' %}
+                    <div class="form-group">
+                        <label class="form-label">Département (optionnel)</label>
+                        <select class="form-select" id="widgetDept">
+                            <option value="">Tous les départements</option>
+                        </select>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Description (optionnel)</label>
+                    <textarea class="form-textarea" id="widgetDescription" placeholder="Ajouter une description..." rows="3"></textarea>
+                </div>
+            </div>
         </div>
-
-        <h3 style="margin-bottom: 1rem;">Format</h3>
-        <div class="export-format">
-            <div class="format-btn" onclick="selectFormat('pdf')">
-                <div class="format-icon"><i class="fas fa-file-pdf"></i></div>
-                <div>PDF</div>
-            </div>
-            <div class="format-btn selected" onclick="selectFormat('excel')">
-                <div class="format-icon"><i class="fas fa-file-excel"></i></div>
-                <div>Excel</div>
-            </div>
-            <div class="format-btn" onclick="selectFormat('csv')">
-                <div class="format-icon"><i class="fas fa-file-csv"></i></div>
-                <div>CSV</div>
-            </div>
-            <div class="format-btn" onclick="selectFormat('json')">
-                <div class="format-icon"><i class="fas fa-file-code"></i></div>
-                <div>JSON</div>
-            </div>
-        </div>
-
-        <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
-            <button class="btn-export btn-secondary" onclick="closeExportModal()">
-                Annuler
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="backBtn" onclick="backToTemplates()" style="display:none;">
+                <i class="fas fa-arrow-left"></i> Retour
             </button>
-            <button class="btn-export" onclick="exportReport()">
-                <i class="fas fa-download"></i> Exporter
+            <button class="btn btn-secondary" onclick="closeModal('addWidgetModal')">Annuler</button>
+            <button class="btn btn-primary" id="nextBtn" onclick="nextStep()">
+                Suivant <i class="fas fa-arrow-right"></i>
+            </button>
+            <button class="btn btn-primary" id="createBtn" onclick="createWidget()" style="display:none;">
+                <i class="fas fa-check"></i> Créer Widget
             </button>
         </div>
     </div>
 </div>
 
-<!-- Loading Overlay -->
-<div id="loadingOverlay" class="loading-overlay">
-    <div class="loading-content">
-        <div class="loading-spinner"></div>
-        <h3>Génération du rapport en cours...</h3>
-        <p>Veuillez patienter</p>
+<!-- Edit Widget Modal -->
+<div id="editWidgetModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">✏️ Modifier le Widget</h2>
+            <button class="modal-close" onclick="closeModal('editWidgetModal')">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Titre <span class="required">*</span></label>
+                <input type="text" class="form-input" id="editWidgetTitle">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Taille</label>
+                    <select class="form-select" id="editWidgetSize">
+                        <option value="1x1">Petite (1x1)</option>
+                        <option value="2x1">Moyenne (2x1)</option>
+                        <option value="2x2">Grande (2x2)</option>
+                        <option value="4x2">Extra Large (4x2)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Couleur</label>
+                    <select class="form-select" id="editWidgetColor">
+                        <option value="blue">🔵 Bleu</option>
+                        <option value="green">🟢 Vert</option>
+                        <option value="orange">🟠 Orange</option>
+                        <option value="purple">🟣 Violet</option>
+                        <option value="red">🔴 Rouge</option>
+                        <option value="pink">🩷 Rose</option>
+                        <option value="cyan">💎 Cyan</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea class="form-textarea" id="editWidgetDescription" rows="3"></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal('editWidgetModal')">Annuler</button>
+            <button class="btn btn-primary" onclick="saveWidgetChanges()">
+                <i class="fas fa-save"></i> Sauvegarder
+            </button>
+        </div>
     </div>
+</div>
+
+<!-- Loading Spinner -->
+<div id="loadingSpinner" class="loading-spinner">
+    <div class="spinner"></div>
+    <p style="color: var(--dark); font-weight: 600;">Chargement...</p>
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf@0.10.1/dist/html2pdf.bundle.min.js"></script>
 <script>
-// Variables globales
-let currentTimeFilter = 'week';
-let currentDepartment = '';
-let selectedExportFormat = 'excel';
+// ==================== VARIABLES GLOBALES ====================
+let editMode = false;
+let widgets = {};
 let charts = {};
-let analyticsData = {};
+let selectedTemplate = null;
+let editingWidgetId = null;
+let currentTimeFilter = 'week';
+let currentDeptFilter = '';
 
-// Initialisation
-document.addEventListener('DOMContentLoaded', function() {
-    initializeDashboard();
-    loadDepartments();
-    loadAnalyticsData();
+const METRIC_MAPS = {
+    'employees': [
+        { value: 'count', label: 'Nombre total' },
+        { value: 'by_role', label: 'Par rôle' },
+        { value: 'by_department', label: 'Par département' },
+        { value: 'new_hires', label: 'Nouvelles embauches' }
+    ],
+    'projects': [
+        { value: 'count', label: 'Nombre total' },
+        { value: 'by_status', label: 'Par statut' },
+        { value: 'completion_rate', label: 'Taux de complétion' },
+        { value: 'progress_trend', label: 'Tendance' }
+    ],
+    'tasks': [
+        { value: 'count', label: 'Nombre total' },
+        { value: 'by_status', label: 'Par statut' }
+    ],
+    'tickets': [
+        { value: 'count', label: 'Nombre total' },
+        { value: 'by_status', label: 'Par statut' },
+        { value: 'by_priority', label: 'Par priorité' }
+    ],
+    'requests': [
+        { value: 'count', label: 'Nombre total' },
+        { value: 'by_type', label: 'Par type' },
+        { value: 'by_status', label: 'Par statut' }
+    ],
+    'tables': [
+        { value: 'count', label: 'Nombre de tables' },
+        { value: 'entries_count', label: 'Total entrées' },
+        { value: 'by_table', label: 'Entrées par table' }
+    ],
+    'attendance': [
+        { value: 'present', label: 'Taux de présence' },
+        { value: 'trend', label: 'Tendance' }
+    ],
+    'payroll': [
+        { value: 'total_salary', label: 'Masse salariale' },
+        { value: 'trend', label: 'Tendance' }
+    ],
+    'departments': [
+        { value: 'count', label: 'Nombre total' },
+        { value: 'comparison', label: 'Comparaison' }
+    ]
+};
+
+// ==================== INITIALISATION ====================
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadGlobalStats();
+    await loadDepartments();
+    await loadSources();
+    await loadTemplates();
+    await loadUserWidgets();
 });
 
-// Initialiser le dashboard
-function initializeDashboard() {
-    // Définir les dates par défaut
-    const today = new Date();
-    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-    
-    document.getElementById('endDate').valueAsDate = today;
-    document.getElementById('startDate').valueAsDate = weekAgo;
+// ==================== FONCTIONS DE CHARGEMENT ====================
+
+async function loadGlobalStats() {
+    try {
+        const response = await fetch('/api/dashboard/global-stats');
+        const data = await response.json();
+        
+        if (data.success) {
+            const stats = data.stats;
+            document.getElementById('statDepts').textContent = stats.departments;
+            document.getElementById('statEmps').textContent = stats.employees;
+            document.getElementById('statProjects').textContent = stats.projects;
+            document.getElementById('statTickets').textContent = stats.tickets;
+            document.getElementById('statTables').textContent = stats.tables;
+            document.getElementById('statEntries').textContent = stats.entries.toLocaleString('fr-FR');
+        }
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
 }
 
-// Charger les départements
 async function loadDepartments() {
     try {
         const response = await fetch('/department/list');
         const data = await response.json();
         
         if (data.success) {
-            const select = document.getElementById('departmentFilter');
+            const deptFilter = document.getElementById('departmentFilter');
+            const deptWidget = document.getElementById('widgetDept');
+            const deptEdit = document.getElementById('editWidgetDept');
+            
             data.departments.forEach(dept => {
-                const option = document.createElement('option');
-                option.value = dept.id;
-                option.textContent = dept.name;
-                select.appendChild(option);
+                if (deptFilter) {
+                    const opt = document.createElement('option');
+                    opt.value = dept.id;
+                    opt.textContent = dept.name;
+                    deptFilter.appendChild(opt);
+                }
+                
+                if (deptWidget) {
+                    const opt = document.createElement('option');
+                    opt.value = dept.id;
+                    opt.textContent = dept.name;
+                    deptWidget.appendChild(opt);
+                }
+                
+                if (deptEdit) {
+                    const opt = document.createElement('option');
+                    opt.value = dept.id;
+                    opt.textContent = dept.name;
+                    deptEdit.appendChild(opt);
+                }
             });
         }
     } catch (error) {
-        console.error('Erreur chargement départements:', error);
+        console.error('Error loading departments:', error);
     }
 }
 
-// Charger les données analytics
-async function loadAnalyticsData() {
-    showLoading();
-    
+async function loadSources() {
     try {
-        // Charger stats blockchain
-        const blockchainResponse = await fetch('/api/blockchain/stats');
-        let blockchainData = {};
+        const response = await fetch('/api/dashboard/available-sources');
+        const data = await response.json();
         
-        if (blockchainResponse.ok) {
-            blockchainData = await blockchainResponse.json();
-        } else {
-            console.warn('Blockchain stats non disponibles');
-            blockchainData = { total_blocks: 0, total_transactions: 0, difficulty: 4, nodes_count: 1 };
+        if (data.success) {
+            const select = document.getElementById('widgetSource');
+            data.sources.forEach(source => {
+                const opt = document.createElement('option');
+                opt.value = source.id;
+                opt.textContent = source.label;
+                select.appendChild(opt);
+            });
         }
-        
-        // Charger stats entreprise
-        const companyResponse = await fetch('/company/stats/{{ current_user.company_id }}');
-        
-        if (!companyResponse.ok) {
-            throw new Error(`HTTP error! status: ${companyResponse.status}`);
-        }
-        
-        const companyData = await companyResponse.json();
-        
-        if (!companyData.success) {
-            throw new Error(companyData.error || 'Erreur lors du chargement des stats');
-        }
-        
-        analyticsData = {
-            blockchain: blockchainData,
-            company: companyData.stats
-        };
-        
-        console.log('Analytics data loaded successfully:', analyticsData);
-        
-        updateKPIs(analyticsData);
-        initializeCharts(analyticsData);
-        updateComparison();
-        generatePredictions(analyticsData);
-        
     } catch (error) {
-        console.error('Erreur chargement données:', error);
-        showNotification('Erreur lors du chargement des données: ' + error.message, 'error');
+        console.error('Error loading sources:', error);
+    }
+}
+
+async function loadTemplates() {
+    try {
+        const response = await fetch('/api/dashboard/templates');
+        const data = await response.json();
         
-        // Utiliser des données par défaut en cas d'erreur
-        analyticsData = {
-            blockchain: { 
-                total_blocks: 0, 
-                total_transactions: 0,
-                difficulty: 4,
-                nodes_count: 1
-            },
-            company: { 
-                departments_count: 0, 
-                users_count: 0, 
-                tables_count: 0, 
-                total_entries: 0,
-                daily_activity: [],
-                departments: [],
-                role_distribution: {
-                    employee: 0,
-                    department_manager: 0,
-                    admin: 0,
-                    technician: 0
-                }
+        if (data.success) {
+            const grid = document.getElementById('templatesGrid');
+            grid.innerHTML = data.templates.map(t => `
+                <div class="template-card" onclick="selectTemplate('${t.id}', ${JSON.stringify(t).replace(/"/g, '&quot;')})">
+                    <div class="template-icon">${t.icon}</div>
+                    <div class="template-name">${t.title}</div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading templates:', error);
+    }
+}
+
+async function loadUserWidgets() {
+    showLoading();
+    try {
+        const response = await fetch('/api/dashboard/widgets/list');
+        const data = await response.json();
+        
+        if (data.success) {
+            if (data.widgets.length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('widgetsGrid').innerHTML = '';
+            } else {
+                document.getElementById('emptyState').style.display = 'none';
+                
+                data.widgets.forEach(w => {
+                    addWidgetCard(w);
+                    loadWidgetData(w.id);
+                });
             }
-        };
-        
-        updateKPIs(analyticsData);
-        initializeCharts(analyticsData);
+        }
+    } catch (error) {
+        console.error('Error loading widgets:', error);
+        showNotification('Erreur de chargement des widgets', 'error');
     } finally {
         hideLoading();
     }
 }
 
-// Mettre à jour les KPIs
-function updateKPIs(data) {
-    document.getElementById('kpi-departments').textContent = data.company.departments_count || 0;
-    document.getElementById('kpi-employees').textContent = data.company.users_count || 0;
-    document.getElementById('kpi-blocks').textContent = data.blockchain.total_blocks || 0;
-    document.getElementById('kpi-transactions').textContent = data.blockchain.total_transactions || 0;
-    document.getElementById('kpi-tables').textContent = data.company.tables_count || 0;
-    document.getElementById('kpi-entries').textContent = data.company.total_entries || 0;
+// ==================== GESTION DES WIDGETS ====================
+
+function addWidgetCard(widget) {
+    const widgetHTML = `
+        <div class="widget-card" data-widget-id="${widget.id}">
+            <div class="widget-header">
+                <div class="widget-title-section">
+                    <div class="widget-icon">📊</div>
+                    <div>
+                        <div class="widget-title">${widget.title}</div>
+                        <div class="widget-meta">${widget.data_source} • ${widget.chart_type}</div>
+                    </div>
+                </div>
+                <div class="widget-controls">
+                    <button class="widget-btn" onclick="refreshWidget(${widget.id})" title="Actualiser">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="widget-btn" onclick="editWidgetModal(${widget.id})" title="Modifier">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="widget-btn delete" onclick="deleteWidget(${widget.id})" title="Supprimer">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="widget-body" id="widget-${widget.id}">
+                <div class="chart-placeholder">
+                    <div class="spinner"></div>
+                    <p>Chargement...</p>
+                </div>
+            </div>
+        </div>
+    `;
     
-    // Créer les sparklines
-    createSparklines();
+    document.getElementById('widgetsGrid').insertAdjacentHTML('beforeend', widgetHTML);
+    widgets[widget.id] = widget;
 }
 
-// Créer les sparklines (mini graphiques)
-function createSparklines() {
-    const sparklineIds = ['departments', 'employees', 'blocks', 'transactions', 'tables', 'entries'];
-    
-    sparklineIds.forEach(id => {
-        const canvas = document.getElementById(`sparkline-${id}`);
-        if (!canvas) return;
+async function loadWidgetData(widgetId) {
+    try {
+        const timeFilter = document.getElementById('timeFilter').value;
+        const deptFilter = document.getElementById('departmentFilter')?.value || '';
         
-        const ctx = canvas.getContext('2d');
-        canvas.width = canvas.offsetWidth;
-        canvas.height = 40;
+        let startDate = '', endDate = '';
+        if (timeFilter === 'custom') {
+            startDate = document.getElementById('startDate').value;
+            endDate = document.getElementById('endDate').value;
+        }
         
-        // Données factices pour la démo
-        const data = Array.from({length: 12}, () => Math.random() * 100);
-        
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: Array.from({length: 12}, (_, i) => i),
-                datasets: [{
-                    data: data,
-                    borderColor: '#3b82f6',
-                    borderWidth: 2,
-                    fill: true,
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    tension: 0.4,
-                    pointRadius: 0
-                }]
-            },
-            options: {
-                responsive: false,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { display: false },
-                    y: { display: false }
-                }
-            }
+        const params = new URLSearchParams({
+            time_filter: timeFilter,
+            department_id: deptFilter,
+            start_date: startDate,
+            end_date: endDate
         });
-    });
+        
+        const response = await fetch(`/api/dashboard/widgets/${widgetId}/data?${params}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            renderWidgetData(widgetId, data.data, widgets[widgetId]);
+        }
+    } catch (error) {
+        console.error(`Error loading widget ${widgetId}:`, error);
+        document.getElementById(`widget-${widgetId}`).innerHTML = `
+            <div class="chart-placeholder">
+                <i class="fas fa-exclamation-circle" style="color: var(--danger); font-size: 2rem;"></i>
+                <p style="color: var(--danger);">Erreur de chargement</p>
+            </div>
+        `;
+    }
 }
 
-// Initialiser les graphiques
-function initializeCharts(data) {
-    // Préparer les données d'activité journalière
-    const dailyActivity = data.company.daily_activity || [];
-    const labels = dailyActivity.length > 0 
-        ? dailyActivity.map(d => d.day_name) 
-        : ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+function renderWidgetData(widgetId, data, widget) {
+    const container = document.getElementById(`widget-${widgetId}`);
     
-    const entriesData = dailyActivity.length > 0
-        ? dailyActivity.map(d => d.entries)
-        : [65, 78, 85, 92, 88, 95, 102];
+    if (!container) return;
     
-    const usersData = dailyActivity.length > 0
-        ? dailyActivity.map(d => d.active_users || Math.floor(Math.random() * 50) + 30)
-        : [45, 52, 58, 64, 62, 70, 75];
-
-    // Graphique principal
-    const mainCtx = document.getElementById('mainChart').getContext('2d');
-    if (charts.main) charts.main.destroy();
-    
-    charts.main = new Chart(mainCtx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Nouvelles Entrées',
-                    data: entriesData,
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                },
-                {
-                    label: 'Utilisateurs Actifs',
-                    data: usersData,
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                intersect: false,
-                mode: 'index'
-            },
-            plugins: {
-                legend: {
-                    position: 'top',
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.dataset.label + ': ' + context.parsed.y;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    }
-                },
-                x: {
-                    grid: {
-                        display: false
-                    }
-                }
-            }
+    if (data.type === 'single') {
+        // KPI
+        let displayValue = data.value;
+        if (data.format === 'currency') {
+            displayValue = new Intl.NumberFormat('fr-TN', { style: 'currency', currency: 'TND' }).format(data.value);
+        } else if (data.format === 'number') {
+            displayValue = data.value.toLocaleString('fr-FR');
         }
-    });
-
-    // Graphique par département
-    const departments = data.company.departments || [];
-    const deptLabels = departments.length > 0 
-        ? departments.map(d => d.name) 
-        : ['IT', 'RH', 'Achats', 'Ventes', 'Finance'];
-    
-    const deptData = departments.length > 0
-        ? departments.map(d => d.entries_count || 0)
-        : [30, 20, 15, 25, 10];
-    
-    const deptCtx = document.getElementById('departmentChart').getContext('2d');
-    if (charts.department) charts.department.destroy();
-    
-    charts.department = new Chart(deptCtx, {
-        type: 'doughnut',
-        data: {
-            labels: deptLabels,
-            datasets: [{
-                data: deptData,
-                backgroundColor: [
-                    '#3b82f6',
-                    '#10b981',
-                    '#f59e0b',
-                    '#8b5cf6',
-                    '#ef4444',
-                    '#06b6d4',
-                    '#ec4899'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const label = context.label || '';
-                            const value = context.parsed || 0;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                            return `${label}: ${value} (${percentage}%)`;
-                        }
+        
+        const badgeClass = (data.change || 0) >= 0 ? 'positive' : 'negative';
+        const badgeIcon = (data.change || 0) >= 0 ? '↑' : '↓';
+        
+        container.innerHTML = `
+            <div class="kpi-content">
+                <div class="kpi-value">${displayValue}</div>
+                <div class="kpi-label">${data.label}</div>
+                ${data.sublabel ? `<div class="kpi-sublabel">${data.sublabel}</div>` : ''}
+                ${data.change !== undefined ? `<div class="kpi-badge ${badgeClass}">${badgeIcon} ${Math.abs(data.change)}%</div>` : ''}
+            </div>
+        `;
+    } else if (data.type === 'chart') {
+        container.innerHTML = `<canvas id="chart-${widgetId}"></canvas>`;
+        
+        setTimeout(() => {
+            const canvas = document.getElementById(`chart-${widgetId}`);
+            if (canvas && canvas.getContext) {
+                if (charts[widgetId]) charts[widgetId].destroy();
+                
+                const colors = getColorScheme(widget.color_scheme);
+                
+                charts[widgetId] = new Chart(canvas.getContext('2d'), {
+                    type: widget.chart_type,
+                    data: {
+                        labels: data.labels,
+                        datasets: data.datasets.map(ds => ({
+                            ...ds,
+                            backgroundColor: ds.backgroundColor || colors.bg,
+                            borderColor: ds.borderColor || colors.border,
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }))
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', padding: 20 }
+                        },
+                        scales: !['pie', 'doughnut', 'radar', 'polarArea'].includes(widget.chart_type) ? {
+                            y: { beginAtZero: true }
+                        } : {}
                     }
-                }
+                });
             }
-        }
-    });
+        }, 100);
+    }
+}
 
-    // Graphique blockchain
-    const blockchainCtx = document.getElementById('blockchainChart').getContext('2d');
-    if (charts.blockchain) charts.blockchain.destroy();
-    
-    // Créer des données factices pour les 4 dernières semaines
-    const weeklyBlocks = [
-        Math.floor((data.blockchain.total_blocks || 0) * 0.2),
-        Math.floor((data.blockchain.total_blocks || 0) * 0.25),
-        Math.floor((data.blockchain.total_blocks || 0) * 0.28),
-        Math.floor((data.blockchain.total_blocks || 0) * 0.27)
-    ];
-    
-    charts.blockchain = new Chart(blockchainCtx, {
-        type: 'bar',
-        data: {
-            labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],
-            datasets: [{
-                label: 'Blocs Créés',
-                data: weeklyBlocks,
-                backgroundColor: '#8b5cf6'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-
-    // Top départements (par nombre d'entrées)
-    const topDepts = [...departments]
-        .sort((a, b) => (b.entries_count || 0) - (a.entries_count || 0))
-        .slice(0, 5);
-    
-    const topDeptLabels = topDepts.length > 0 
-        ? topDepts.map(d => d.name)
-        : ['IT', 'Ventes', 'RH', 'Finance', 'Achats'];
-    
-    const topDeptData = topDepts.length > 0
-        ? topDepts.map(d => d.entries_count || 0)
-        : [95, 87, 82, 78, 65];
-    
-    const topDeptCtx = document.getElementById('topDepartmentsChart').getContext('2d');
-    if (charts.topDept) charts.topDept.destroy();
-    
-    charts.topDept = new Chart(topDeptCtx, {
-        type: 'bar',  // Changé de 'horizontalBar' à 'bar'
-        data: {
-            labels: topDeptLabels,
-            datasets: [{
-                label: 'Nombre d\'entrées',
-                data: topDeptData,
-                backgroundColor: [
-                    '#3b82f6',
-                    '#10b981',
-                    '#f59e0b',
-                    '#8b5cf6',
-                    '#ef4444'
-                ]
-            }]
-        },
-        options: {
-            indexAxis: 'y',  // Important : pour rendre horizontal
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                x: {
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-
-    // Distribution des rôles
-    const roleDistribution = data.company.role_distribution || {};
-    const roleLabels = {
-        'employee': 'Employés',
-        'department_manager': 'Managers',
-        'admin': 'Admins',
-        'technician': 'Techniciens'
+function getColorScheme(scheme) {
+    const schemes = {
+        blue: { bg: '#0078d480', border: '#0078d4' },
+        green: { bg: '#10b98180', border: '#10b981' },
+        orange: { bg: '#f59e0b80', border: '#f59e0b' },
+        purple: { bg: '#8b5cf680', border: '#8b5cf6' },
+        red: { bg: '#ef444480', border: '#ef4444' },
+        pink: { bg: '#ec409980', border: '#ec4099' },
+        cyan: { bg: '#06b6d480', border: '#06b6d4' }
     };
+    return schemes[scheme] || schemes.blue;
+}
+
+async function refreshWidget(widgetId) {
+    document.getElementById(`widget-${widgetId}`).innerHTML = `
+        <div class="chart-placeholder">
+            <div class="spinner"></div>
+        </div>
+    `;
+    await loadWidgetData(widgetId);
+    showNotification('Widget actualisé', 'success');
+}
+
+async function deleteWidget(widgetId) {
+    if (!confirm('Êtes-vous sûr ?')) return;
     
-    const rolesData = [
-        roleDistribution.employee || 0,
-        roleDistribution.department_manager || 0,
-        roleDistribution.admin || 0,
-        roleDistribution.technician || 0
-    ];
-    
-    const rolesCtx = document.getElementById('rolesChart').getContext('2d');
-    if (charts.roles) charts.roles.destroy();
-    
-    charts.roles = new Chart(rolesCtx, {
-        type: 'pie',
-        data: {
-            labels: Object.values(roleLabels),
-            datasets: [{
-                data: rolesData,
-                backgroundColor: [
-                    '#3b82f6',
-                    '#10b981',
-                    '#f59e0b',
-                    '#8b5cf6'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const label = context.label || '';
-                            const value = context.parsed || 0;
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                            return `${label}: ${value} (${percentage}%)`;
-                        }
-                    }
-                }
+    showLoading();
+    try {
+        const response = await fetch(`/api/dashboard/widgets/${widgetId}/delete`, {
+            method: 'DELETE'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            document.querySelector(`[data-widget-id="${widgetId}"]`).remove();
+            delete widgets[widgetId];
+            if (charts[widgetId]) charts[widgetId].destroy();
+            
+            if (Object.keys(widgets).length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
             }
+            
+            showNotification('Widget supprimé', 'success');
         }
-    });
+    } catch (error) {
+        showNotification('Erreur de suppression', 'error');
+    } finally {
+        hideLoading();
+    }
 }
 
-// Filtres temporels
-function setTimeFilter(period) {
-    currentTimeFilter = period;
-    
-    // Mettre à jour les boutons
-    document.querySelectorAll('.time-filter-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    event.target.classList.add('active');
-    
-    // Recharger les données
-    loadAnalyticsData();
+// ==================== MODAL FONCTIONS ====================
+
+function openAddWidget() {
+    document.getElementById('addWidgetModal').classList.add('active');
+    document.getElementById('templatesStep').style.display = 'block';
+    document.getElementById('configStep').style.display = 'none';
+    document.getElementById('nextBtn').style.display = 'inline-flex';
+    document.getElementById('createBtn').style.display = 'none';
+    document.getElementById('backBtn').style.display = 'none';
 }
 
-function applyCustomDateRange() {
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+}
+
+function selectTemplate(id, template) {
+    selectedTemplate = template;
+    document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
+    event.target.closest('.template-card').classList.add('selected');
+}
+
+function nextStep() {
+    if (!selectedTemplate) {
+        showNotification('Sélectionner un template', 'warning');
+        return;
+    }
+    
+    document.getElementById('widgetTitle').value = selectedTemplate.title;
+    document.getElementById('widgetSource').value = selectedTemplate.data_source;
+    document.getElementById('widgetChart').value = selectedTemplate.chart_type;
+    updateMetrics();
+    
+    document.getElementById('templatesStep').style.display = 'none';
+    document.getElementById('configStep').style.display = 'block';
+    document.getElementById('nextBtn').style.display = 'none';
+    document.getElementById('createBtn').style.display = 'inline-flex';
+    document.getElementById('backBtn').style.display = 'inline-flex';
+}
+
+function backToTemplates() {
+    document.getElementById('templatesStep').style.display = 'block';
+    document.getElementById('configStep').style.display = 'none';
+    document.getElementById('nextBtn').style.display = 'inline-flex';
+    document.getElementById('createBtn').style.display = 'none';
+    document.getElementById('backBtn').style.display = 'none';
+}
+
+function updateMetrics() {
+    const source = document.getElementById('widgetSource').value;
+    const metricSelect = document.getElementById('widgetMetric');
+    
+    metricSelect.innerHTML = '<option value="">Sélectionner...</option>';
+    
+    (METRIC_MAPS[source] || []).forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.value;
+        opt.textContent = m.label;
+        metricSelect.appendChild(opt);
+    });
+    
+    if (selectedTemplate?.metric) {
+        metricSelect.value = selectedTemplate.metric;
+    }
+}
+
+async function createWidget() {
+    const title = document.getElementById('widgetTitle').value;
+    const source = document.getElementById('widgetSource').value;
+    const metric = document.getElementById('widgetMetric').value;
+    const chart = document.getElementById('widgetChart').value;
+    const size = document.getElementById('widgetSize').value;
+    const color = document.getElementById('widgetColor').value;
+    const desc = document.getElementById('widgetDescription').value;
+    const dept = document.getElementById('widgetDept')?.value || '';
+    
+    if (!title || !source || !metric || !chart) {
+        showNotification('Remplir tous les champs', 'warning');
+        return;
+    }
+    
+    showLoading();
+    try {
+        const response = await fetch('/api/dashboard/widgets/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title, 
+                widget_type: 'custom',
+                data_source: source,
+                chart_type: chart,
+                size,
+                color_scheme: color,
+                description: desc,
+                department_id: dept || null,
+                filters: { metric }
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            addWidgetCard(data.widget);
+            loadWidgetData(data.widget.id);
+            closeModal('addWidgetModal');
+            showNotification('Widget créé', 'success');
+        }
+    } catch (error) {
+        showNotification('Erreur de création', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+function editWidgetModal(widgetId) {
+    const widget = widgets[widgetId];
+    document.getElementById('editWidgetTitle').value = widget.title;
+    document.getElementById('editWidgetSize').value = widget.size;
+    document.getElementById('editWidgetColor').value = widget.color_scheme;
+    document.getElementById('editWidgetDescription').value = widget.description || '';
+    editingWidgetId = widgetId;
+    document.getElementById('editWidgetModal').classList.add('active');
+}
+
+async function saveWidgetChanges() {
+    const title = document.getElementById('editWidgetTitle').value;
+    const size = document.getElementById('editWidgetSize').value;
+    const color = document.getElementById('editWidgetColor').value;
+    const desc = document.getElementById('editWidgetDescription').value;
+    
+    showLoading();
+    try {
+        const response = await fetch(`/api/dashboard/widgets/${editingWidgetId}/update`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title, size, color_scheme: color, description: desc
+            })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            const widget = document.querySelector(`[data-widget-id="${editingWidgetId}"]`);
+            widget.querySelector('.widget-title').textContent = title;
+            widgets[editingWidgetId] = data.widget;
+            closeModal('editWidgetModal');
+            showNotification('Widget mis à jour', 'success');
+        }
+    } catch (error) {
+        showNotification('Erreur de mise à jour', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// ==================== FILTRES ==================== 
+
+function handleTimeFilter() {
+    const filter = document.getElementById('timeFilter').value;
+    if (filter === 'custom') {
+        document.getElementById('customDateGroup').style.display = 'flex';
+    } else {
+        document.getElementById('customDateGroup').style.display = 'none';
+        refreshAllWidgets();
+    }
+}
+
+function applyCustomDate() {
     const start = document.getElementById('startDate').value;
     const end = document.getElementById('endDate').value;
     
-    if (start && end) {
-        currentTimeFilter = 'custom';
-        loadAnalyticsData();
-    }
-}
-
-function filterByDepartment() {
-    currentDepartment = document.getElementById('departmentFilter').value;
-    loadAnalyticsData();
-}
-
-// Mettre à jour le graphique principal
-function updateMainChart() {
-    const type = document.getElementById('mainChartType').value;
-    
-    if (charts.main) {
-        charts.main.destroy();
+    if (!start || !end) {
+        showNotification('Dates requises', 'warning');
+        return;
     }
     
-    const ctx = document.getElementById('mainChart').getContext('2d');
-    charts.main = new Chart(ctx, {
-        type: type,
-        data: {
-            labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'],
-            datasets: [{
-                label: 'Activité',
-                data: [65, 78, 85, 92, 88, 95, 102],
-                borderColor: '#3b82f6',
-                backgroundColor: type === 'area' ? 'rgba(59, 130, 246, 0.1)' : '#3b82f6',
-                tension: 0.4,
-                fill: type === 'area'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
+    refreshAllWidgets();
 }
 
-// Rafraîchir un graphique
-function refreshChart(chartName) {
-    showNotification('Actualisation des données...', 'info');
-    loadAnalyticsData();
+function refreshAllWidgets() {
+    showNotification('Actualisation...', 'info');
+    Object.keys(widgets).forEach(wid => loadWidgetData(parseInt(wid)));
 }
 
-// Télécharger un graphique
-function downloadChart(chartName) {
-    const chart = charts[chartName];
-    if (chart) {
-        const url = chart.toBase64Image();
-        const link = document.createElement('a');
-        link.download = `chart-${chartName}-${Date.now()}.png`;
-        link.href = url;
-        link.click();
-        showNotification('Graphique téléchargé', 'success');
-    }
+function toggleEditMode() {
+    editMode = !editMode;
+    document.getElementById('editModeBtn').style.display = editMode ? 'none' : 'inline-flex';
+    document.getElementById('saveBtn').style.display = editMode ? 'inline-flex' : 'none';
+    document.body.classList.toggle('edit-mode', editMode);
 }
 
-// Plein écran
-function fullscreenChart(chartName) {
-    const chartCard = event.target.closest('.chart-card');
-    if (chartCard.requestFullscreen) {
-        chartCard.requestFullscreen();
-    }
+function saveLayout() {
+    showNotification('Layout sauvegardé', 'success');
+    editMode = false;
+    document.getElementById('editModeBtn').style.display = 'inline-flex';
+    document.getElementById('saveBtn').style.display = 'none';
 }
 
-// Mise à jour de la comparaison
-function updateComparison() {
-    const tbody = document.getElementById('comparisonTableBody');
-    
-    const comparisonData = [
-        { metric: 'Transactions', current: 1250, previous: 1035, trend: 'up' },
-        { metric: 'Utilisateurs Actifs', current: 85, previous: 78, trend: 'up' },
-        { metric: 'Blocs Créés', current: 156, previous: 142, trend: 'up' },
-        { metric: 'Tables Créées', current: 12, previous: 9, trend: 'up' },
-        { metric: 'Temps Moyen Réponse', current: '1.2s', previous: '1.8s', trend: 'down' }
-    ];
-    
-    tbody.innerHTML = comparisonData.map(row => {
-        const change = typeof row.current === 'number' && typeof row.previous === 'number'
-            ? ((row.current - row.previous) / row.previous * 100).toFixed(1)
-            : 0;
-        
-        const trendClass = row.trend === 'up' ? 'up' : row.trend === 'down' ? 'down' : 'stable';
-        const trendIcon = row.trend === 'up' ? 'fa-arrow-up' : row.trend === 'down' ? 'fa-arrow-down' : 'fa-minus';
-        
-        return `
-            <tr>
-                <td><strong>${row.metric}</strong></td>
-                <td>${row.current}</td>
-                <td>${row.previous}</td>
-                <td>${change}%</td>
-                <td>
-                    <span class="trend-indicator ${trendClass}">
-                        <i class="fas ${trendIcon}"></i>
-                        ${Math.abs(change)}%
-                    </span>
-                </td>
-            </tr>
-        `;
-    }).join('');
-}
-
-// Générer les prédictions
-function generatePredictions(data) {
-    // Algorithme simple de prédiction (moyenne mobile)
-    const transactions = data.blockchain.total_transactions || 0;
-    const predicted = Math.round(transactions * 1.18);
-    
-    document.getElementById('pred-transactions').textContent = `~${predicted}`;
-    document.getElementById('pred-employees').textContent = `~${Math.round((data.company.users_count || 0) * 1.08)}`;
-    document.getElementById('pred-blocks').textContent = `~${Math.round((data.blockchain.total_blocks || 0) * 1.15)}`;
-}
-
-// Modal Export
-function openExportModal() {
-    document.getElementById('exportModal').classList.add('active');
-}
-
-function closeExportModal() {
-    document.getElementById('exportModal').classList.remove('active');
-}
-
-function selectFormat(format) {
-    selectedExportFormat = format;
-    
-    document.querySelectorAll('.format-btn').forEach(btn => {
-        btn.classList.remove('selected');
-    });
-    event.target.closest('.format-btn').classList.add('selected');
-}
-
-// Exporter le rapport
-async function exportReport() {
-    const options = {
-        kpis: document.getElementById('export-kpis').checked,
-        charts: document.getElementById('export-charts').checked,
-        comparison: document.getElementById('export-comparison').checked,
-        predictions: document.getElementById('export-predictions').checked,
-        format: selectedExportFormat,
-        timeFilter: currentTimeFilter,
-        department: currentDepartment
+async function exportToPDF() {
+    showNotification('Préparation de l\'export...', 'info');
+    const element = document.querySelector('.main-content');
+    const opt = {
+        margin: 10,
+        filename: 'dashboard.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { orientation: 'landscape' }
     };
-    
-    closeExportModal();
-    showLoading('Génération du rapport en cours...');
-    
-    try {
-        // Simuler l'export (à remplacer par un vrai endpoint)
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Créer un fichier factice
-        const filename = `rapport-dashboard-${Date.now()}.${selectedExportFormat}`;
-        showNotification(`Rapport ${filename} téléchargé avec succès!`, 'success');
-        
-    } catch (error) {
-        console.error('Erreur export:', error);
-        showNotification('Erreur lors de l\'export', 'error');
-    } finally {
-        hideLoading();
-    }
+    await html2pdf().set(opt).from(element).save();
+    showNotification('Export réussi', 'success');
 }
 
-// Loading
-function showLoading(message = 'Chargement...') {
-    const overlay = document.getElementById('loadingOverlay');
-    if (message !== 'Chargement...') {
-        overlay.querySelector('h3').textContent = message;
-    }
-    overlay.classList.add('active');
+// ==================== UTILS ====================
+
+function showLoading() {
+    document.getElementById('loadingSpinner').classList.add('active');
 }
 
 function hideLoading() {
-    document.getElementById('loadingOverlay').classList.remove('active');
+    document.getElementById('loadingSpinner').classList.remove('active');
 }
 
-// Notifications
-function showNotification(message, type = 'info') {
-    // Utiliser le système de notification global si disponible
-    if (window.FlowERP && window.FlowERP.showNotification) {
-        window.FlowERP.showNotification(message, type);
-    } else {
-        alert(message);
-    }
-}
-
-// Personnalisation du dashboard
-function toggleDashboardSettings() {
-    showNotification('Personnalisation en développement', 'info');
+function showNotification(msg, type = 'info') {
+    const notif = document.createElement('div');
+    notif.className = `notification ${type}`;
+    notif.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i> ${msg}`;
+    document.body.appendChild(notif);
+    setTimeout(() => notif.remove(), 3000);
 }
 </script>
 {% endblock %}

@@ -8,6 +8,11 @@ from datetime import timedelta
 from config import config
 from database import db
 from models.payroll import Payslip
+import json
+from models.dashboard import DashboardWidget, DashboardLayout
+from models.department_table import DepartmentTable, TableRow
+from sqlalchemy import func
+from routes.dashboard_widgets import dashboard_widgets_bp
 
 # Import des routes
 from routes.auth import auth_bp
@@ -22,6 +27,9 @@ from routes.payroll import payroll_bp
 from routes.chat import chat_bp, init_socketio
 from routes.tickets import tickets_bp
 from routes.projects import projects_bp
+from utils.project_scheduler import register_scheduler_routes
+from routes.dashboard_custom import dashboard_custom_bp
+
 
 
 def get_blockchain():
@@ -68,8 +76,10 @@ def create_app(config_name='development'):
     app.register_blueprint(chat_bp)
     app.register_blueprint(tickets_bp)
     app.register_blueprint(projects_bp)
+    app.register_blueprint(dashboard_custom_bp)
+    app.register_blueprint(dashboard_widgets_bp)
 
-    
+    register_scheduler_routes(app)
     # Initialiser SocketIO et le retourner
     socketio = init_socketio(app)
 
@@ -103,7 +113,7 @@ def create_app(config_name='development'):
     
     @app.route('/dashboard')
     def dashboard():
-        """Page du dashboard principal"""
+        """Page du dashboard personnalisé"""
         if 'user_id' not in session:
             return redirect(url_for('auth.login_page'))
         
@@ -114,8 +124,332 @@ def create_app(config_name='development'):
             session.clear()
             return redirect(url_for('auth.login_page'))
         
+        # Utiliser le nouveau template dashboard_custom.html
         return render_template('dashboard.html', user=user)
     
+    @app.route('/company/stats/<int:company_id>')
+    def company_stats(company_id):
+        """Statistiques détaillées de l'entreprise"""
+        if 'user_id' not in session:
+            return jsonify({'error': 'Non authentifié'}), 401
+        
+        from models.user import User
+        from models.company import Company, Department
+        from models.department_table import DepartmentTable
+        from sqlalchemy import func
+        
+        user = User.query.get(session['user_id'])
+        
+        # Vérifier les permissions
+        if not user.is_admin and user.company_id != company_id:
+            return jsonify({'error': 'Accès non autorisé'}), 403
+        
+        try:
+            company = Company.query.get_or_404(company_id)
+            
+            # Statistiques de base
+            departments_count = Department.query.filter_by(
+                company_id=company_id,
+                is_active=True
+            ).count()
+            
+            users_count = User.query.filter_by(
+                company_id=company_id,
+                is_active=True
+            ).count()
+            
+            tables_count = db.session.query(func.count(DepartmentTable.id)).join(
+                Department
+            ).filter(
+                Department.company_id == company_id,
+                DepartmentTable.is_active == True
+            ).scalar() or 0
+            
+            # Compter les entrées totales dans toutes les tables
+            from models.department_table import TableRow
+            total_entries = db.session.query(func.count(TableRow.id)).join(
+                DepartmentTable
+            ).join(
+                Department
+            ).filter(
+                Department.company_id == company_id,
+                TableRow.is_active == True
+            ).scalar() or 0
+            
+            # Activité quotidienne des 7 derniers jours
+            from datetime import datetime, timedelta
+            seven_days_ago = datetime.utcnow() - timedelta(days=7)
+            
+            daily_activity = []
+            day_names = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+            
+            for i in range(7):
+                day = seven_days_ago + timedelta(days=i)
+                day_start = day.replace(hour=0, minute=0, second=0, microsecond=0)
+                day_end = day_start + timedelta(days=1)
+                
+                entries = db.session.query(func.count(TableRow.id)).join(
+                    DepartmentTable
+                ).join(
+                    Department
+                ).filter(
+                    Department.company_id == company_id,
+                    TableRow.created_at >= day_start,
+                    TableRow.created_at < day_end
+                ).scalar() or 0
+                
+                active_users = db.session.query(func.count(func.distinct(TableRow.created_by_id))).join(
+                    DepartmentTable
+                ).join(
+                    Department
+                ).filter(
+                    Department.company_id == company_id,
+                    TableRow.created_at >= day_start,
+                    TableRow.created_at < day_end
+                ).scalar() or 0
+                
+                daily_activity.append({
+                    'day_name': day_names[day.weekday()],
+                    'entries': entries,
+                    'active_users': active_users
+                })
+            
+            # Statistiques par département
+            departments = Department.query.filter_by(
+                company_id=company_id,
+                is_active=True
+            ).all()
+            
+            departments_data = []
+            for dept in departments:
+                entries_count = db.session.query(func.count(TableRow.id)).join(
+                    DepartmentTable
+                ).filter(
+                    DepartmentTable.department_id == dept.id,
+                    TableRow.is_active == True
+                ).scalar() or 0
+                
+                departments_data.append({
+                    'id': dept.id,
+                    'name': dept.name,
+                    'entries_count': entries_count,
+                    'users_count': len(dept.employees)
+                })
+            
+            # Distribution des rôles
+            role_distribution = {}
+            roles = db.session.query(
+                User.role,
+                func.count(User.id).label('count')
+            ).filter(
+                User.company_id == company_id,
+                User.is_active == True
+            ).group_by(User.role).all()
+            
+            for role, count in roles:
+                role_distribution[role] = count
+            
+            return jsonify({
+                'success': True,
+                'stats': {
+                    'departments_count': departments_count,
+                    'users_count': users_count,
+                    'tables_count': tables_count,
+                    'total_entries': total_entries,
+                    'daily_activity': daily_activity,
+                    'departments': departments_data,
+                    'role_distribution': role_distribution
+                }
+            })
+            
+        except Exception as e:
+            print(f"Erreur lors du chargement des stats: {str(e)}")
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 500
+
+
+    # Routes pour les widgets personnalisés (garder celles du dashboard_custom.py)
+
+    @app.route('/api/dashboard/widgets/list', methods=['GET'])
+    def list_user_widgets():
+        """Liste des widgets personnalisés de l'utilisateur"""
+        if 'user_id' not in session:
+            return jsonify({'error': 'Non authentifié'}), 401
+        
+        from models.user import User
+        from models.dashboard import DashboardWidget
+        
+        user = User.query.get(session['user_id'])
+        
+        widgets = DashboardWidget.query.filter_by(
+            user_id=user.id,
+            is_active=True
+        ).order_by(DashboardWidget.position_order).all()
+        
+        return jsonify({
+            'success': True,
+            'widgets': [w.to_dict() for w in widgets]
+        })
+
+
+    @app.route('/api/dashboard/widgets/create', methods=['POST'])
+    def create_widget():
+        """Créer un nouveau widget personnalisé"""
+        if 'user_id' not in session:
+            return jsonify({'error': 'Non authentifié'}), 401
+        
+        from models.user import User
+        from models.dashboard import DashboardWidget
+        import json
+        
+        user = User.query.get(session['user_id'])
+        data = request.json
+        
+        widget = DashboardWidget(
+            user_id=user.id,
+            title=data.get('title'),
+            widget_type=data.get('widget_type'),
+            chart_type=data.get('chart_type', 'bar'),
+            data_source=data.get('data_source'),
+            department_id=data.get('department_id'),
+            filters=json.dumps(data.get('filters', {})),
+            size=data.get('size', 'medium'),
+            position_order=data.get('position_order', 0)
+        )
+        
+        db.session.add(widget)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'widget': widget.to_dict()
+        })
+
+
+    @app.route('/api/dashboard/widgets/<int:widget_id>/data', methods=['GET'])
+    def get_widget_data(widget_id):
+        """Récupérer les données d'un widget"""
+        if 'user_id' not in session:
+            return jsonify({'error': 'Non authentifié'}), 401
+        
+        from models.user import User
+        from models.dashboard import DashboardWidget
+        
+        user = User.query.get(session['user_id'])
+        widget = DashboardWidget.query.get_or_404(widget_id)
+        
+        if widget.user_id != user.id:
+            return jsonify({'error': 'Non autorisé'}), 403
+        
+        # Générer les données selon le type de widget
+        # (utiliser la logique de dashboard_custom.py)
+        data = generate_widget_data(widget, user)
+        
+        return jsonify({
+            'success': True,
+            'data': data
+        })
+
+
+    def generate_widget_data(widget, user):
+        """Génère les données pour un widget selon son type"""
+        import json
+        from datetime import datetime, timedelta
+        from sqlalchemy import func
+        
+        filters = json.loads(widget.filters) if widget.filters else {}
+        date_range = filters.get('date_range', 'week')
+        
+        # Calculer les dates
+        end_date = datetime.utcnow()
+        if date_range == 'today':
+            start_date = end_date.replace(hour=0, minute=0, second=0)
+        elif date_range == 'week':
+            start_date = end_date - timedelta(days=7)
+        elif date_range == 'month':
+            start_date = end_date - timedelta(days=30)
+        elif date_range == 'quarter':
+            start_date = end_date - timedelta(days=90)
+        elif date_range == 'year':
+            start_date = end_date - timedelta(days=365)
+        else:
+            start_date = end_date - timedelta(days=7)
+        
+        data_source = widget.data_source
+        
+        # Exemple pour les employés
+        if data_source == 'employees':
+            from models.user import User
+            
+            if widget.widget_type == 'count':
+                count = User.query.filter(
+                    User.company_id == user.company_id,
+                    User.is_active == True,
+                    User.created_at >= start_date
+                ).count()
+                
+                return {
+                    'value': count,
+                    'label': 'Employés',
+                    'type': 'single'
+                }
+            
+            elif widget.widget_type == 'distribution':
+                roles = db.session.query(
+                    User.role,
+                    func.count(User.id).label('count')
+                ).filter(
+                    User.company_id == user.company_id,
+                    User.is_active == True
+                ).group_by(User.role).all()
+                
+                role_labels = {
+                    'admin': 'Administrateurs',
+                    'directeur_rh': 'Directeurs RH',
+                    'department_manager': 'Managers',
+                    'employee': 'Employés',
+                    'technician': 'Techniciens'
+                }
+                
+                return {
+                    'labels': [role_labels.get(r.role, r.role) for r in roles],
+                    'datasets': [{
+                        'label': 'Distribution des rôles',
+                        'data': [r.count for r in roles]
+                    }],
+                    'type': 'chart'
+                }
+        
+        # Retour par défaut
+        return {
+            'labels': [],
+            'datasets': [],
+            'type': 'chart'
+        }
+
+
+    @app.route('/api/dashboard/widgets/<int:widget_id>/delete', methods=['DELETE'])
+    def delete_widget(widget_id):
+        """Supprimer un widget"""
+        if 'user_id' not in session:
+            return jsonify({'error': 'Non authentifié'}), 401
+        
+        from models.user import User
+        from models.dashboard import DashboardWidget
+        
+        user = User.query.get(session['user_id'])
+        widget = DashboardWidget.query.get_or_404(widget_id)
+        
+        if widget.user_id != user.id:
+            return jsonify({'error': 'Non autorisé'}), 403
+        
+        db.session.delete(widget)
+        db.session.commit()
+        
+        return jsonify({'success': True})
+        
     @app.route('/departments')
     def departments_page():
         """Page de gestion des départements"""

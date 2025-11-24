@@ -323,6 +323,37 @@
                                         <option value="critical" {{ 'selected' if project.priority == 'critical' }}>Critique</option>
                                     </select>
                                 </div>
+                                <div class="mt-3">
+                                    <button class="btn btn-success" onclick="markProjectComplete()">
+                                        <i class="fas fa-check-circle"></i> Marquer comme terminé
+                                    </button>
+                                </div>
+                                <script>
+                                    async function markProjectComplete() {
+                                        if (!confirm('Êtes-vous sûr de vouloir marquer ce projet comme terminé ?')) {
+                                            return;
+                                        }
+                                        
+                                        try {
+                                            const response = await fetch(`/projects/api/${projectId}/mark-complete`, {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' }
+                                            });
+                                            
+                                            const result = await response.json();
+                                            
+                                            if (result.success) {
+                                                showAlert('success', 'Projet marqué comme terminé');
+                                                location.reload();
+                                            } else {
+                                                showAlert('error', result.error);
+                                            }
+                                        } catch (error) {
+                                            console.error('Erreur:', error);
+                                            showAlert('error', 'Erreur de connexion');
+                                        }
+                                    }
+                                    </script>
                                 
                                 <button type="submit" class="btn btn-primary">Enregistrer</button>
                             </form>

@@ -1,0 +1,1230 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Power BI - FlowERP{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack@7.3.0/dist/gridstack.min.css">
+<style>
+:root {
+    --dashboard-bg: #f0f2f5;
+    --widget-bg: #ffffff;
+    --primary-blue: #0078d4;
+    --secondary-blue: #106ebe;
+    --border-color: #e1e4e8;
+    --shadow: 0 2px 8px rgba(0,0,0,0.1);
+    --shadow-hover: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+body {
+    background: var(--dashboard-bg);
+}
+
+.dashboard-powerbi {
+    padding: 1rem;
+    min-height: 100vh;
+}
+
+/* Header */
+.dashboard-header {
+    background: var(--widget-bg);
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dashboard-title-section h1 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    color: #323130;
+}
+
+.dashboard-subtitle {
+    color: #605e5c;
+    font-size: 0.9rem;
+}
+
+.dashboard-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.btn-action {
+    padding: 0.6rem 1.2rem;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-primary {
+    background: var(--primary-blue);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--secondary-blue);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3);
+}
+
+.btn-secondary {
+    background: #f3f2f1;
+    color: #323130;
+}
+
+.btn-secondary:hover {
+    background: #edebe9;
+}
+
+/* Toolbar */
+.dashboard-toolbar {
+    background: var(--widget-bg);
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.toolbar-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.toolbar-label {
+    font-weight: 500;
+    color: #323130;
+    font-size: 0.9rem;
+}
+
+.filter-select {
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+    min-width: 150px;
+}
+
+.date-input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+/* Grid Container */
+.grid-stack {
+    background: transparent;
+}
+
+.grid-stack-item-content {
+    background: var(--widget-bg);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 0.2s;
+}
+
+.grid-stack-item-content:hover {
+    box-shadow: var(--shadow-hover);
+}
+
+/* Widget */
+.widget {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.widget-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fafafa;
+}
+
+.widget-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #323130;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.widget-icon {
+    color: var(--primary-blue);
+    font-size: 1.1rem;
+}
+
+.widget-menu {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.widget-menu-btn {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    border-radius: 4px;
+    color: #605e5c;
+    transition: all 0.2s;
+}
+
+.widget-menu-btn:hover {
+    background: #f3f2f1;
+    color: var(--primary-blue);
+}
+
+.widget-body {
+    flex: 1;
+    padding: 1.25rem;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* KPI Number Widget */
+.kpi-number {
+    text-align: center;
+    width: 100%;
+}
+
+.kpi-value {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--primary-blue);
+    margin-bottom: 0.5rem;
+    line-height: 1;
+}
+
+.kpi-label {
+    font-size: 1rem;
+    color: #605e5c;
+    font-weight: 500;
+}
+
+.kpi-trend {
+    margin-top: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.kpi-trend.up {
+    background: #e6f4ea;
+    color: #137333;
+}
+
+.kpi-trend.down {
+    background: #fce8e6;
+    color: #c5221f;
+}
+
+/* Chart Widget */
+.chart-container {
+    width: 100%;
+    height: 100%;
+    min-height: 200px;
+    position: relative;
+}
+
+/* Add Widget Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #323130;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #605e5c;
+    padding: 0.5rem;
+    border-radius: 4px;
+}
+
+.modal-close:hover {
+    background: #f3f2f1;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.templates-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.template-card {
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.template-card:hover {
+    border-color: var(--primary-blue);
+    background: #f8f9fa;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+}
+
+.template-card.selected {
+    border-color: var(--primary-blue);
+    background: #e6f2ff;
+}
+
+.template-icon {
+    font-size: 2.5rem;
+    color: var(--primary-blue);
+    margin-bottom: 0.75rem;
+}
+
+.template-title {
+    font-weight: 600;
+    color: #323130;
+    margin-bottom: 0.25rem;
+}
+
+.template-desc {
+    font-size: 0.875rem;
+    color: #605e5c;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    color: #323130;
+    margin-bottom: 0.5rem;
+}
+
+.form-input,
+.form-select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.form-input:focus,
+.form-select:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.1);
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+/* Loading */
+.loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.95);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-overlay.active {
+    display: flex;
+}
+
+.loading-content {
+    text-align: center;
+}
+
+.spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid #f3f2f1;
+    border-top-color: var(--primary-blue);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .dashboard-actions {
+        width: 100%;
+        justify-content: stretch;
+    }
+    
+    .btn-action {
+        flex: 1;
+    }
+    
+    .dashboard-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #605e5c;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    color: #d2d0ce;
+    margin-bottom: 1rem;
+}
+
+.empty-state-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #323130;
+}
+
+.empty-state-desc {
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-powerbi">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div class="dashboard-title-section">
+            <h1>📊 Tableau de Bord Personnalisé</h1>
+            <p class="dashboard-subtitle">Créez et personnalisez vos analyses en temps réel</p>
+        </div>
+        <div class="dashboard-actions">
+            <button class="btn-action btn-secondary" onclick="toggleEditMode()">
+                <i class="fas fa-edit"></i> <span id="editModeText">Modifier</span>
+            </button>
+            <button class="btn-action btn-primary" onclick="openAddWidgetModal()">
+                <i class="fas fa-plus"></i> Ajouter Widget
+            </button>
+            <button class="btn-action btn-secondary" onclick="saveLayout()">
+                <i class="fas fa-save"></i> Sauvegarder
+            </button>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="dashboard-toolbar">
+        <div class="toolbar-group">
+            <span class="toolbar-label">Période:</span>
+            <select class="filter-select" id="timeFilter" onchange="refreshAllWidgets()">
+                <option value="today">Aujourd'hui</option>
+                <option value="week" selected>7 derniers jours</option>
+                <option value="month">30 derniers jours</option>
+                <option value="quarter">90 derniers jours</option>
+                <option value="year">1 an</option>
+                <option value="custom">Personnalisé</option>
+            </select>
+        </div>
+
+        <div class="toolbar-group" id="customDateGroup" style="display: none;">
+            <input type="date" class="date-input" id="startDate">
+            <span>à</span>
+            <input type="date" class="date-input" id="endDate">
+        </div>
+
+        {% if current_user.is_admin or current_user.role == 'directeur_rh' %}
+        <div class="toolbar-group">
+            <span class="toolbar-label">Département:</span>
+            <select class="filter-select" id="departmentFilter" onchange="refreshAllWidgets()">
+                <option value="">Tous</option>
+            </select>
+        </div>
+        {% endif %}
+
+        <div class="toolbar-group" style="margin-left: auto;">
+            <button class="btn-action btn-secondary" onclick="refreshAllWidgets()">
+                <i class="fas fa-sync-alt"></i> Actualiser
+            </button>
+            <button class="btn-action btn-secondary" onclick="exportDashboard()">
+                <i class="fas fa-download"></i> Exporter
+            </button>
+        </div>
+    </div>
+
+    <!-- Grid Container -->
+    <div class="grid-stack" id="dashboardGrid">
+        <!-- Widgets will be added here dynamically -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="empty-state" style="display: none;">
+        <div class="empty-state-icon">
+            <i class="fas fa-chart-bar"></i>
+        </div>
+        <h2 class="empty-state-title">Aucun widget</h2>
+        <p class="empty-state-desc">Commencez par ajouter votre premier widget pour visualiser vos données</p>
+        <button class="btn-action btn-primary" onclick="openAddWidgetModal()">
+            <i class="fas fa-plus"></i> Ajouter mon premier widget
+        </button>
+    </div>
+</div>
+
+<!-- Add Widget Modal -->
+<div id="addWidgetModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Ajouter un Widget</h2>
+            <button class="modal-close" onclick="closeAddWidgetModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <h3 style="margin-bottom: 1rem;">Choisir un template</h3>
+            <div class="templates-grid" id="templatesGrid">
+                <!-- Templates will be loaded here -->
+            </div>
+
+            <div id="widgetForm" style="display: none;">
+                <h3 style="margin-bottom: 1rem;">Configuration</h3>
+                
+                <div class="form-group">
+                    <label class="form-label">Titre du widget</label>
+                    <input type="text" class="form-input" id="widgetTitle" placeholder="Mon widget personnalisé">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Source de données</label>
+                    <select class="form-select" id="widgetDataSource">
+                        <!-- Options loaded from backend -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Type de widget</label>
+                    <select class="form-select" id="widgetType">
+                        <option value="count">Compteur</option>
+                        <option value="distribution">Distribution</option>
+                        <option value="trend">Tendance</option>
+                        <option value="comparison">Comparaison</option>
+                        <option value="sum">Somme</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Type de graphique</label>
+                    <select class="form-select" id="widgetChartType">
+                        <option value="number">Nombre</option>
+                        <option value="bar">Barres</option>
+                        <option value="line">Lignes</option>
+                        <option value="pie">Camembert</option>
+                        <option value="doughnut">Anneau</option>
+                    </select>
+                </div>
+
+                {% if current_user.is_admin or current_user.role == 'directeur_rh' %}
+                <div class="form-group">
+                    <label class="form-label">Département (optionnel)</label>
+                    <select class="form-select" id="widgetDepartment">
+                        <option value="">Tous les départements</option>
+                    </select>
+                </div>
+                {% endif %}
+
+                <div class="form-group">
+                    <label class="form-label">Taille</label>
+                    <select class="form-select" id="widgetSize">
+                        <option value="small">Petite (1x1)</option>
+                        <option value="medium" selected>Moyenne (2x1)</option>
+                        <option value="large">Grande (2x2)</option>
+                        <option value="full">Pleine largeur (4x2)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-action btn-secondary" onclick="closeAddWidgetModal()">Annuler</button>
+            <button class="btn-action btn-primary" onclick="createWidget()">
+                <i class="fas fa-plus"></i> Ajouter
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-content">
+        <div class="spinner"></div>
+        <h3>Chargement...</h3>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/gridstack@7.3.0/dist/gridstack-all.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+let grid;
+let editMode = false;
+let widgets = {};
+let charts = {};
+let selectedTemplate = null;
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    initializeGrid();
+    loadDepartments();
+    loadAvailableSources();
+    loadTemplates();
+    loadUserWidgets();
+    
+    // Custom date range toggle
+    document.getElementById('timeFilter').addEventListener('change', function() {
+        const customGroup = document.getElementById('customDateGroup');
+        customGroup.style.display = this.value === 'custom' ? 'flex' : 'none';
+    });
+});
+
+// Initialize GridStack
+function initializeGrid() {
+    grid = GridStack.init({
+        cellHeight: 100,
+        margin: 12,
+        float: true,
+        resizable: { handles: 'e, se, s, sw, w' },
+        draggable: { handle: '.widget-header' },
+        disableDrag: true,
+        disableResize: true
+    });
+}
+
+// Toggle Edit Mode
+function toggleEditMode() {
+    editMode = !editMode;
+    
+    if (editMode) {
+        grid.enable();
+        document.getElementById('editModeText').textContent = 'Terminer';
+        showNotification('Mode édition activé', 'info');
+    } else {
+        grid.disable();
+        document.getElementById('editModeText').textContent = 'Modifier';
+        showNotification('Mode édition désactivé', 'info');
+    }
+}
+
+// Load departments
+async function loadDepartments() {
+    try {
+        const response = await fetch('/department/list');
+        const data = await response.json();
+        
+        if (data.success) {
+            const selects = ['departmentFilter', 'widgetDepartment'];
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (select) {
+                    data.departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.id;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error loading departments:', error);
+    }
+}
+
+// Load available data sources
+async function loadAvailableSources() {
+    try {
+        const response = await fetch('/api/dashboard/available-sources');
+        const data = await response.json();
+        
+        if (data.success) {
+            const select = document.getElementById('widgetDataSource');
+            data.sources.forEach(source => {
+                const option = document.createElement('option');
+                option.value = source.id;
+                option.textContent = source.label;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Error loading sources:', error);
+    }
+}
+
+// Load templates
+async function loadTemplates() {
+    try {
+        const response = await fetch('/api/dashboard/templates');
+        const data = await response.json();
+        
+        if (data.success) {
+            const grid = document.getElementById('templatesGrid');
+            grid.innerHTML = data.templates.map(template => `
+                <div class="template-card" onclick="selectTemplate('${template.id}')">
+                    <div class="template-icon">
+                        <i class="fas fa-${template.icon}"></i>
+                    </div>
+                    <div class="template-title">${template.title}</div>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Error loading templates:', error);
+    }
+}
+
+// Select template
+function selectTemplate(templateId) {
+    selectedTemplate = templateId;
+    
+    // Update UI
+    document.querySelectorAll('.template-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    event.target.closest('.template-card').classList.add('selected');
+    
+    // Show form
+    document.getElementById('widgetForm').style.display = 'block';
+    
+    // Auto-fill based on template
+    // (implement template-specific logic here)
+}
+
+// Load user widgets
+async function loadUserWidgets() {
+    showLoading();
+    
+    try {
+        const response = await fetch('/api/dashboard/widgets/list');
+        const data = await response.json();
+        
+        if (data.success) {
+            if (data.widgets.length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+            } else {
+                document.getElementById('emptyState').style.display = 'none';
+                data.widgets.forEach(widget => {
+                    addWidgetToGrid(widget);
+                    loadWidgetData(widget.id);
+                });
+            }
+        }
+    } catch (error) {
+        console.error('Error loading widgets:', error);
+        showNotification('Erreur lors du chargement des widgets', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Add widget to grid
+function addWidgetToGrid(widget) {
+    const sizes = {
+        small: { w: 1, h: 1 },
+        medium: { w: 2, h: 1 },
+        large: { w: 2, h: 2 },
+        full: { w: 4, h: 2 }
+    };
+    
+    const size = sizes[widget.size] || sizes.medium;
+    
+    const widgetHtml = `
+        <div class="grid-stack-item" gs-w="${size.w}" gs-h="${size.h}" gs-id="${widget.id}">
+            <div class="grid-stack-item-content">
+                <div class="widget">
+                    <div class="widget-header">
+                        <div class="widget-title">
+                            <span class="widget-icon"><i class="fas fa-chart-bar"></i></span>
+                            ${widget.title}
+                        </div>
+                        <div class="widget-menu">
+                            <button class="widget-menu-btn" onclick="refreshWidget(${widget.id})" title="Actualiser">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <button class="widget-menu-btn" onclick="editWidget(${widget.id})" title="Modifier">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="widget-menu-btn" onclick="deleteWidget(${widget.id})" title="Supprimer">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="widget-body" id="widget-body-${widget.id}">
+                        <div class="spinner" style="width: 40px; height: 40px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    grid.addWidget(widgetHtml);
+    widgets[widget.id] = widget;
+}
+
+// Load widget data
+async function loadWidgetData(widgetId) {
+    try {
+        const response = await fetch(`/api/dashboard/widgets/${widgetId}/data`);
+        const data = await response.json();
+        
+        if (data.success) {
+            renderWidget(widgetId, data.data);
+        }
+    } catch (error) {
+        console.error(`Error loading widget ${widgetId}:`, error);
+        const body = document.getElementById(`widget-body-${widgetId}`);
+        if (body) {
+            body.innerHTML = '<p style="color: red;">Erreur de chargement</p>';
+        }
+    }
+}
+
+// Render widget based on type
+function renderWidget(widgetId, data) {
+    const widget = widgets[widgetId];
+    const body = document.getElementById(`widget-body-${widgetId}`);
+    
+    if (!body) return;
+    
+    if (data.type === 'single') {
+        // KPI Number
+        const value = data.format === 'currency' 
+            ? new Intl.NumberFormat('fr-TN', { style: 'currency', currency: 'TND' }).format(data.value)
+            : data.value.toLocaleString('fr-TN');
+        
+        body.innerHTML = `
+            <div class="kpi-number">
+                <div class="kpi-value">${value}</div>
+                <div class="kpi-label">${data.label}</div>
+            </div>
+        `;
+    } else if (data.type === 'chart') {
+        // Chart
+        body.innerHTML = `<canvas id="chart-${widgetId}"></canvas>`;
+        
+        setTimeout(() => {
+            const ctx = document.getElementById(`chart-${widgetId}`);
+            if (ctx) {
+                if (charts[widgetId]) {
+                    charts[widgetId].destroy();
+                }
+                
+                charts[widgetId] = new Chart(ctx.getContext('2d'), {
+                    type: widget.chart_type,
+                    data: {
+                        labels: data.labels,
+                        datasets: data.datasets.map((ds, i) => ({
+                            ...ds,
+                            backgroundColor: getChartColors(data.labels.length, i),
+                            borderColor: getChartColors(data.labels.length, i, true),
+                            borderWidth: 2
+                        }))
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: data.datasets.length > 1,
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+        }, 100);
+    }
+}
+
+// Chart colors
+function getChartColors(count, datasetIndex = 0, border = false) {
+    const colors = [
+        ['#0078d4', '#106ebe', '#005a9e', '#004578', '#003052'],
+        ['#10b981', '#059669', '#047857', '#065f46', '#064e3b'],
+        ['#f59e0b', '#d97706', '#b45309', '#92400e', '#78350f'],
+        ['#8b5cf6', '#7c3aed', '#6d28d9', '#5b21b6', '#4c1d95']
+    ];
+    
+    const palette = colors[datasetIndex % colors.length];
+    
+    if (count === 1) {
+        return border ? palette[0] : palette[0] + (border ? '' : '80');
+    }
+    
+    return palette.slice(0, count).map(c => border ? c : c + '80');
+}
+
+// Refresh widget
+function refreshWidget(widgetId) {
+    const body = document.getElementById(`widget-body-${widgetId}`);
+    if (body) {
+        body.innerHTML = '<div class="spinner" style="width: 40px; height: 40px;"></div>';
+    }
+    loadWidgetData(widgetId);
+}
+
+// Refresh all widgets
+function refreshAllWidgets() {
+    showNotification('Actualisation en cours...', 'info');
+    Object.keys(widgets).forEach(widgetId => {
+        refreshWidget(parseInt(widgetId));
+    });
+}
+
+// Delete widget
+async function deleteWidget(widgetId) {
+    if (!confirm('Voulez-vous vraiment supprimer ce widget ?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/dashboard/widgets/${widgetId}/delete`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            grid.removeWidget(`[gs-id="${widgetId}"]`);
+            delete widgets[widgetId];
+            if (charts[widgetId]) {
+                charts[widgetId].destroy();
+                delete charts[widgetId];
+            }
+            
+            showNotification('Widget supprimé', 'success');
+            
+            // Show empty state if no widgets
+            if (Object.keys(widgets).length === 0) {
+                document.getElementById('emptyState').style.display = 'block';
+            }
+        }
+    } catch (error) {
+        console.error('Error deleting widget:', error);
+        showNotification('Erreur lors de la suppression', 'error');
+    }
+}
+
+// Edit widget
+function editWidget(widgetId) {
+    // TODO: Implement edit functionality
+    showNotification('Édition en cours de développement', 'info');
+}
+
+// Open add widget modal
+function openAddWidgetModal() {
+    document.getElementById('addWidgetModal').classList.add('active');
+    selectedTemplate = null;
+    document.getElementById('widgetForm').style.display = 'none';
+    
+    // Reset form
+    document.getElementById('widgetTitle').value = '';
+    document.querySelectorAll('.template-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+}
+
+// Close add widget modal
+function closeAddWidgetModal() {
+    document.getElementById('addWidgetModal').classList.remove('active');
+}
+
+// Create widget
+async function createWidget() {
+    const title = document.getElementById('widgetTitle').value;
+    const dataSource = document.getElementById('widgetDataSource').value;
+    const widgetType = document.getElementById('widgetType').value;
+    const chartType = document.getElementById('widgetChartType').value;
+    const size = document.getElementById('widgetSize').value;
+    const departmentId = document.getElementById('widgetDepartment')?.value || null;
+    
+    if (!title || !dataSource) {
+        showNotification('Veuillez remplir tous les champs requis', 'error');
+        return;
+    }
+    
+    showLoading();
+    
+    try {
+        const timeFilter = document.getElementById('timeFilter').value;
+        
+        const response = await fetch('/api/dashboard/widgets/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title,
+                widget_type: widgetType,
+                chart_type: chartType,
+                data_source: dataSource,
+                department_id: departmentId,
+                size,
+                filters: {
+                    date_range: timeFilter
+                },
+                position_order: Object.keys(widgets).length
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            closeAddWidgetModal();
+            document.getElementById('emptyState').style.display = 'none';
+            addWidgetToGrid(data.widget);
+            loadWidgetData(data.widget.id);
+            showNotification('Widget ajouté avec succès', 'success');
+        } else {
+            showNotification(data.error || 'Erreur lors de la création', 'error');
+        }
+    } catch (error) {
+        console.error('Error creating widget:', error);
+        showNotification('Erreur lors de la création du widget', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Save layout
+async function saveLayout() {
+    const layout = [];
+    
+    grid.engine.nodes.forEach(node => {
+        layout.push({
+            id: node.el.getAttribute('gs-id'),
+            x: node.x,
+            y: node.y,
+            w: node.w,
+            h: node.h
+        });
+    });
+    
+    showLoading();
+    
+    try {
+        // TODO: Implement save layout endpoint
+        await new Promise(resolve => setTimeout(resolve, 500));
+        showNotification('Layout sauvegardé', 'success');
+    } catch (error) {
+        console.error('Error saving layout:', error);
+        showNotification('Erreur lors de la sauvegarde', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Export dashboard
+async function exportDashboard() {
+    showLoading('Génération du rapport...');
+    
+    try {
+        // Collect all data
+        const exportData = {
+            widgets: [],
+            timestamp: new Date().toISOString(),
+            user: '{{ current_user.get_full_name() }}'
+        };
+        
+        for (const widgetId in widgets) {
+            const widget = widgets[widgetId];
+            const response = await fetch(`/api/dashboard/widgets/${widgetId}/data`);
+            const data = await response.json();
+            
+            if (data.success) {
+                exportData.widgets.push({
+                    title: widget.title,
+                    type: widget.widget_type,
+                    data: data.data
+                });
+            }
+        }
+        
+        // Create download
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `dashboard-export-${Date.now()}.json`;
+        a.click();
+        
+        showNotification('Dashboard exporté avec succès', 'success');
+    } catch (error) {
+        console.error('Error exporting dashboard:', error);
+        showNotification('Erreur lors de l\'export', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// Loading overlay
+function showLoading(message = 'Chargement...') {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.querySelector('h3').textContent = message;
+    overlay.classList.add('active');
+}
+
+function hideLoading() {
+    document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+// Notifications
+function showNotification(message, type = 'info') {
+    // Use existing notification system
+    if (window.FlowERP && window.FlowERP.showNotification) {
+        window.FlowERP.showNotification(message, type);
+    } else {
+        // Fallback
+        const colors = {
+            success: '#10b981',
+            error: '#ef4444',
+            info: '#0078d4',
+            warning: '#f59e0b'
+        };
+        
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${colors[type]};
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 3000;
+            animation: slideIn 0.3s ease;
+        `;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+}
+
+// Add animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}
