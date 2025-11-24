@@ -13,7 +13,7 @@ from models.dashboard import DashboardWidget, DashboardLayout
 from models.department_table import DepartmentTable, TableRow
 from sqlalchemy import func
 from routes.dashboard_widgets import dashboard_widgets_bp
-
+from routes.billing import billing_bp
 # Import des routes
 from routes.auth import auth_bp
 from routes.company import company_bp
@@ -78,6 +78,7 @@ def create_app(config_name='development'):
     app.register_blueprint(projects_bp)
     app.register_blueprint(dashboard_custom_bp)
     app.register_blueprint(dashboard_widgets_bp)
+    app.register_blueprint(billing_bp)
 
     register_scheduler_routes(app)
     # Initialiser SocketIO et le retourner
@@ -126,6 +127,21 @@ def create_app(config_name='development'):
         
         # Utiliser le nouveau template dashboard_custom.html
         return render_template('dashboard.html', user=user)
+    
+    @app.route('/billing')
+    def billing_page():
+        """Page de gestion de la facturation et comptabilité"""
+        if 'user_id' not in session:
+            return redirect(url_for('auth.login_page'))
+        
+        from models.user import User
+        user = User.query.get(session['user_id'])
+        
+        if not user or not user.is_active:
+            session.clear()
+            return redirect(url_for('auth.login_page'))
+        
+        return render_template('billing.html', user=user)
     
     @app.route('/company/stats/<int:company_id>')
     def company_stats(company_id):

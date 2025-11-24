@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rappel de Paiement</title>
+    <style>
+        /* Mêmes styles que le template précédent */
+        body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f8fafc; }
+        .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        .header { background: linear-gradient(135deg, #F59E0B, #D97706); color: white; padding: 30px; text-align: center; }
+        .content { padding: 30px; }
+        .urgent { background: #FEF3C7; color: #92400E; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #F59E0B; }
+        .button { display: inline-block; background: #F59E0B; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; }
+        .footer { background: #1F2937; color: #9CA3AF; padding: 25px; text-align: center; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Rappel de Paiement</h1>
+            <p>Facture {{ invoice.invoice_number }}</p>
+        </div>
+        
+        <div class="content">
+            <p>Bonjour <strong>{{ customer.name }}</strong>,</p>
+            
+            <p>Nous souhaitons vous rappeler que la facture <strong>{{ invoice.invoice_number }}</strong> d'un montant de <strong>{{ total_amount }} {{ invoice.currency }}</strong> était due le <strong>{{ due_date }}</strong>.</p>
+            
+            <div class="urgent">
+                <strong>📅 À ce jour, un solde de {{ balance_due }} {{ invoice.currency }} reste à régler.</strong>
+            </div>
+            
+            <p>Nous vous remercions de bien vouloir procéder au paiement dans les plus brefs délais.</p>
+            
+            <div style="text-align: center; margin: 25px 0;">
+                <a href="#" class="button">💳 Procéder au Paiement</a>
+            </div>
+            
+            <p>Pour toute question, contactez-nous :<br>
+            📞 {{ company.phone }}<br>
+            📧 {{ company.email }}</p>
+            
+            <p>Cordialement,<br>Service Facturation {{ company.name }}</p>
+        </div>
+        
+        <div class="footer">
+            <p>© {{ current_date.split('/')[-1] }} {{ company.name }}</p>
+            {{ tracking_pixel | safe }}
+        </div>
+    </div>
+</body>
+</html>

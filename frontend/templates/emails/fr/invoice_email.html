@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facture {{ invoice.invoice_number }}</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            margin: 0; 
+            padding: 0; 
+            background: #f8fafc;
+        }
+        .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: white; 
+            border-radius: 12px; 
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header { 
+            background: linear-gradient(135deg, #3B82F6, #1E40AF);
+            color: white; 
+            padding: 30px; 
+            text-align: center;
+        }
+        .header h1 { 
+            margin: 0; 
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .header .subtitle { 
+            margin: 10px 0 0; 
+            opacity: 0.9;
+            font-size: 16px;
+        }
+        .content { 
+            padding: 30px; 
+        }
+        .invoice-info {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #3B82F6;
+        }
+        .amount-highlight {
+            background: linear-gradient(135deg, #10B981, #059669);
+            color: white;
+            padding: 25px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 25px 0;
+        }
+        .amount-highlight .label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        .amount-highlight .value {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 0;
+        }
+        .due-date {
+            background: #FEF3C7;
+            color: #92400E;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+            border: 1px solid #F59E0B;
+        }
+        .payment-info {
+            background: #ECFDF5;
+            border: 1px solid #A7F3D0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            background: #3B82F6;
+            color: white;
+            padding: 14px 28px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            margin: 10px 5px;
+            text-align: center;
+        }
+        .button.secondary {
+            background: #6B7280;
+        }
+        .footer { 
+            background: #1F2937; 
+            color: #9CA3AF; 
+            padding: 25px; 
+            text-align: center;
+            font-size: 12px;
+        }
+        .footer a { 
+            color: #E5E7EB; 
+            text-decoration: none;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .info-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #E5E7EB;
+        }
+        .info-label {
+            font-size: 12px;
+            color: #6B7280;
+            margin-bottom: 5px;
+        }
+        .info-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1F2937;
+        }
+        @media (max-width: 600px) {
+            .info-grid { grid-template-columns: 1fr; }
+            .content { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Facture {{ invoice.invoice_number }}</h1>
+            <p class="subtitle">{{ company.name }}</p>
+        </div>
+        
+        <div class="content">
+            <p>Bonjour <strong>{{ customer.name }}</strong>,</p>
+            
+            <p>Veuillez trouver ci-joint votre facture <strong>{{ invoice.invoice_number }}</strong>.</p>
+            
+            <div class="invoice-info">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">NUMÉRO DE FACTURE</div>
+                        <div class="info-value">{{ invoice.invoice_number }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">DATE D'ÉMISSION</div>
+                        <div class="info-value">{{ current_date }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">DATE D'ÉCHÉANCE</div>
+                        <div class="info-value">{{ due_date }}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">DEVISE</div>
+                        <div class="info-value">{{ invoice.currency }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="amount-highlight">
+                <div class="label">MONTANT TOTAL</div>
+                <div class="value">{{ total_amount }} {{ invoice.currency }}</div>
+            </div>
+            
+            {% if invoice.balance_due > 0 %}
+            <div class="due-date">
+                <strong>⏰ À RÉGLER AVANT LE {{ due_date }}</strong>
+                <br>
+                <span>Solde à payer: {{ balance_due }} {{ invoice.currency }}</span>
+            </div>
+            {% endif %}
+            
+            <div class="payment-info">
+                <h3 style="margin-top: 0; color: #065F46;">📋 Instructions de Paiement</h3>
+                
+                <p><strong>Méthodes de paiement acceptées:</strong></p>
+                <ul>
+                    <li>Virement bancaire</li>
+                    <li>Chèque</li>
+                    <li>Carte bancaire (en ligne)</li>
+                </ul>
+                
+                <p><strong>Coordonnées bancaires:</strong></p>
+                <ul>
+                    <li><strong>IBAN:</strong> TN59 1000 1000 1000 1000 1000</li>
+                    <li><strong>BIC:</strong> BFTNTNTT</li>
+                    <li><strong>Banque:</strong> Banque de Tunisie</li>
+                    <li><strong>Référence:</strong> {{ invoice.invoice_number }}</li>
+                </ul>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="#" class="button">📄 Télécharger la Facture</a>
+                <a href="#" class="button secondary">💳 Payer en Ligne</a>
+            </div>
+            
+            <p>Pour toute question concernant cette facture, n'hésitez pas à nous contacter :</p>
+            <p>
+                <strong>{{ company.name }}</strong><br>
+                📞 {{ company.phone or 'Non renseigné' }}<br>
+                📧 {{ company.email or 'Non renseigné' }}
+            </p>
+            
+            <p>Cordialement,<br>L'équipe {{ company.name }}</p>
+        </div>
+        
+        <div class="footer">
+            <p>© {{ current_date.split('/')[-1] }} {{ company.name }} - Tous droits réservés</p>
+            <p>
+                <a href="#">Centre d'aide</a> • 
+                <a href="#">Conditions d'utilisation</a> • 
+                <a href="#">Politique de confidentialité</a>
+            </p>
+            <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
+            {{ tracking_pixel | safe }}
+        </div>
+    </div>
+</body>
+</html>

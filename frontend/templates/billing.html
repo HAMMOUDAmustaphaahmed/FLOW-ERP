@@ -1,0 +1,494 @@
+<!-- templates/billing.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facturation & Comptabilité - FlowERP</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .financial-kpi {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+        }
+        
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+        
+        .kpi-label {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+        
+        .kpi-trend {
+            font-size: 0.8rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .kpi-trend.positive {
+            color: #10b981;
+        }
+        
+        .kpi-trend.negative {
+            color: #ef4444;
+        }
+        
+        .invoice-status {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-draft { background: #f3f4f6; color: #6b7280; }
+        .status-sent { background: #dbeafe; color: #1d4ed8; }
+        .status-paid { background: #dcfce7; color: #166534; }
+        .status-overdue { background: #fef2f2; color: #dc2626; }
+        
+        .cashflow-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: #e5e7eb;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+        
+        .cashflow-fill {
+            height: 100%;
+            border-radius: 4px;
+        }
+        
+        .fill-income { background: #10b981; }
+        .fill-expenses { background: #ef4444; }
+        .fill-net { background: #3b82f6; }
+        
+        .billing-nav {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .nav-pills {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .nav-pill {
+            padding: 0.7rem 1.2rem;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .nav-pill:hover {
+            background: #e2e8f0;
+        }
+        
+        .nav-pill.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        .section {
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        .invoice-item {
+            border-left: 4px solid #3b82f6;
+            background: #f8fafc;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .risk-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        .risk-low { background: #dcfce7; color: #166534; }
+        .risk-medium { background: #fef3c7; color: #92400e; }
+        .risk-high { background: #fef2f2; color: #dc2626; }
+    </style>
+</head>
+<body>
+    {% extends "base.html" %}
+    
+    {% block content %}
+    <div class="container">
+        <!-- En-tête -->
+        <div class="page-header">
+            <h1><i class="fas fa-money-bill-wave"></i> Facturation & Comptabilité</h1>
+        </div>
+
+        <!-- Tableau de bord Executive -->
+        <div class="financial-kpi-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <div class="financial-kpi">
+                <div class="kpi-label">Trésorerie</div>
+                <div class="kpi-value" id="cashBalance">0 TND</div>
+                <div class="cashflow-bar">
+                    <div class="cashflow-fill fill-net" style="width: 82%"></div>
+                </div>
+                <div class="kpi-trend positive">↑ 12% vs mois dernier</div>
+            </div>
+            
+            <div class="financial-kpi" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <div class="kpi-label">Chiffre d'Affaires</div>
+                <div class="kpi-value" id="monthlyRevenue">0 TND</div>
+                <div class="kpi-trend positive" id="revenueTrend"></div>
+            </div>
+            
+            <div class="financial-kpi" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <div class="kpi-label">Délai Paiement Moyen</div>
+                <div class="kpi-value" id="avgPaymentDays">0 jours</div>
+                <div class="kpi-label">Moyenne secteur: 28j</div>
+            </div>
+            
+            <div class="financial-kpi" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                <div class="kpi-label">Alertes Risque</div>
+                <div class="kpi-value" id="riskAlerts">0</div>
+                <div class="kpi-label">Clients à risque modéré</div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="billing-nav">
+            <div class="nav-pills">
+                <div class="nav-pill active" data-section="overview">📊 Vue d'ensemble</div>
+                <div class="nav-pill" data-section="invoices">🧾 Factures</div>
+                <div class="nav-pill" data-section="customers">👥 Clients</div>
+                <div class="nav-pill" data-section="payments">💳 Paiements</div>
+                <div class="nav-pill" data-section="expenses">📋 Dépenses</div>
+                <div class="nav-pill" data-section="reports">📈 Rapports</div>
+                <div class="nav-pill" data-section="cashflow">💰 Trésorerie</div>
+            </div>
+        </div>
+
+        <!-- Sections de contenu -->
+        <div id="sectionContent">
+            <!-- Vue d'ensemble -->
+            <div class="section active" id="overview-section">
+                <div class="grid-2" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+                    <!-- Graphique principal -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Cash-flow Mensuel</h3>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="cashflowChart" height="250"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Métriques rapides -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Statut Factures</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="metric-item">
+                                <div class="metric-label">En attente</div>
+                                <div class="metric-value" id="pendingInvoices">0</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">En retard</div>
+                                <div class="metric-value text-danger" id="overdueInvoices">0</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Payées ce mois</div>
+                                <div class="metric-value text-success" id="paidThisMonth">0</div>
+                            </div>
+                            <div class="metric-item">
+                                <div class="metric-label">Ratio de retard</div>
+                                <div class="metric-value" id="overdueRatio">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Dernières factures -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Dernières Factures</h3>
+                        <button class="btn btn-primary" onclick="showSection('invoices')">
+                            <i class="fas fa-plus"></i> Nouvelle Facture
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="recentInvoicesList">
+                            <!-- Chargé dynamiquement -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Autres sections seront chargées dynamiquement -->
+            <div class="section" id="invoices-section">
+                <!-- Contenu des factures -->
+            </div>
+            
+            <div class="section" id="customers-section">
+                <!-- Contenu des clients -->
+            </div>
+            
+            <!-- ... autres sections ... -->
+        </div>
+    </div>
+    {% endblock %}
+
+    {% block extra_js %}
+    <script>
+        // Variables globales
+        let financialData = {};
+        let cashflowChart = null;
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            loadExecutiveStats();
+            loadFinancialOverview();
+            setupNavigation();
+            
+            // Charger les données toutes les 30 secondes
+            setInterval(loadExecutiveStats, 30000);
+        });
+
+        // Navigation entre sections
+        function setupNavigation() {
+            document.querySelectorAll('.nav-pill').forEach(pill => {
+                pill.addEventListener('click', function() {
+                    // Désactiver toutes les pills
+                    document.querySelectorAll('.nav-pill').forEach(p => p.classList.remove('active'));
+                    // Cacher toutes les sections
+                    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+                    
+                    // Activer la pill cliquée
+                    this.classList.add('active');
+                    
+                    // Afficher la section correspondante
+                    const sectionId = this.getAttribute('data-section') + '-section';
+                    document.getElementById(sectionId).classList.add('active');
+                    
+                    // Charger les données de la section si nécessaire
+                    loadSectionData(this.getAttribute('data-section'));
+                });
+            });
+        }
+
+        // Charger les stats executive
+        async function loadExecutiveStats() {
+            try {
+                const response = await fetch('/api/billing/stats/executive');
+                const data = await response.json();
+                
+                if (data.success) {
+                    financialData = data.executive_stats;
+                    updateExecutiveDashboard();
+                }
+            } catch (error) {
+                console.error('Erreur chargement stats:', error);
+            }
+        }
+
+        // Mettre à jour le tableau de bord executive
+        function updateExecutiveDashboard() {
+            document.getElementById('cashBalance').textContent = 
+                financialData.cash_balance.toLocaleString('fr-TN') + ' TND';
+            
+            document.getElementById('avgPaymentDays').textContent = 
+                Math.round(financialData.avg_payment_days) + ' jours';
+            
+            document.getElementById('riskAlerts').textContent = 
+                financialData.high_risk_alerts;
+            
+            // Mettre à jour la tendance des revenus
+            const trendElement = document.getElementById('revenueTrend');
+            if (financialData.revenue_growth > 0) {
+                trendElement.className = 'kpi-trend positive';
+                trendElement.textContent = `↑ ${financialData.revenue_growth}% vs mois dernier`;
+            } else {
+                trendElement.className = 'kpi-trend negative';
+                trendElement.textContent = `↓ ${Math.abs(financialData.revenue_growth)}% vs mois dernier`;
+            }
+        }
+
+        // Charger la vue d'ensemble financière
+        async function loadFinancialOverview() {
+            try {
+                const [overviewResponse, cashflowResponse, invoicesResponse] = await Promise.all([
+                    fetch('/api/billing/dashboard/overview'),
+                    fetch('/api/billing/dashboard/cashflow'),
+                    fetch('/api/billing/invoices/list?limit=5')
+                ]);
+
+                const overviewData = await overviewResponse.json();
+                const cashflowData = await cashflowResponse.json();
+                const invoicesData = await invoicesResponse.json();
+
+                if (overviewData.success) {
+                    updateOverviewMetrics(overviewData.overview);
+                }
+
+                if (cashflowData.success) {
+                    renderCashflowChart(cashflowData.cashflow);
+                }
+
+                if (invoicesData.success) {
+                    renderRecentInvoices(invoicesData.invoices);
+                }
+
+            } catch (error) {
+                console.error('Erreur chargement overview:', error);
+            }
+        }
+
+        // Mettre à jour les métriques de vue d'ensemble
+        function updateOverviewMetrics(overview) {
+            document.getElementById('monthlyRevenue').textContent = 
+                overview.monthly_revenue.toLocaleString('fr-TN') + ' TND';
+            document.getElementById('pendingInvoices').textContent = overview.pending_invoices;
+            document.getElementById('overdueInvoices').textContent = overview.overdue_invoices;
+            document.getElementById('overdueRatio').textContent = overview.overdue_ratio + '%';
+        }
+
+        // Rendre le graphique de cash-flow
+        function renderCashflowChart(cashflowData) {
+            const ctx = document.getElementById('cashflowChart').getContext('2d');
+            
+            if (cashflowChart) {
+                cashflowChart.destroy();
+            }
+
+            cashflowChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: cashflowData.map(item => item.month),
+                    datasets: [
+                        {
+                            label: 'Revenus',
+                            data: cashflowData.map(item => item.income),
+                            backgroundColor: '#10b981',
+                            borderColor: '#059669',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Dépenses',
+                            data: cashflowData.map(item => item.expenses),
+                            backgroundColor: '#ef4444',
+                            borderColor: '#dc2626',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Cash-flow Net',
+                            data: cashflowData.map(item => item.net_cashflow),
+                            type: 'line',
+                            borderColor: '#3b82f6',
+                            borderWidth: 2,
+                            fill: false
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Évolution du Cash-flow'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString('fr-TN') + ' TND';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Afficher les dernières factures
+        function renderRecentInvoices(invoices) {
+            const container = document.getElementById('recentInvoicesList');
+            
+            if (invoices.length === 0) {
+                container.innerHTML = '<p class="text-muted">Aucune facture récente</p>';
+                return;
+            }
+
+            container.innerHTML = invoices.map(invoice => `
+                <div class="invoice-item">
+                    <div style="display: flex; justify-content: between; align-items: center;">
+                        <div>
+                            <strong>${invoice.invoice_number}</strong>
+                            <div class="text-muted">${invoice.customer_name}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div class="invoice-status status-${invoice.status}">
+                                ${getStatusText(invoice.status)}
+                            </div>
+                            <div class="text-bold">${invoice.total_amount.toLocaleString('fr-TN')} TND</div>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: between; margin-top: 0.5rem; font-size: 0.9rem;">
+                        <span>Émission: ${new Date(invoice.issue_date).toLocaleDateString('fr-FR')}</span>
+                        <span>Échéance: ${new Date(invoice.due_date).toLocaleDateString('fr-FR')}</span>
+                        <span>Solde: ${invoice.balance_due.toLocaleString('fr-TN')} TND</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Helper pour le texte du statut
+        function getStatusText(status) {
+            const statusMap = {
+                'draft': 'Brouillon',
+                'sent': 'Envoyée',
+                'paid': 'Payée',
+                'overdue': 'En retard',
+                'approved': 'Approuvée'
+            };
+            return statusMap[status] || status;
+        }
+
+        // Charger les données d'une section spécifique
+        function loadSectionData(section) {
+            // Implémentation pour charger les données de chaque section
+            console.log('Chargement section:', section);
+        }
+
+        // Fonction utilitaire pour changer de section
+        function showSection(sectionName) {
+            document.querySelector(`[data-section="${sectionName}"]`).click();
+        }
+    </script>
+    {% endblock %}
+</body>
+</html>

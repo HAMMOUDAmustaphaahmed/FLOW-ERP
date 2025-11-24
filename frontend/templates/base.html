@@ -56,7 +56,12 @@
                     <i class="fas fa-chart-line"></i>
                     <span>Dashboard</span>
                 </a>
-                
+                <li class="nav-item">
+    <a href="{{ url_for('billing_page') }}" class="nav-link">
+        <i class="fas fa-money-bill-wave"></i>
+        <span>Facturation</span>
+    </a>
+</li>
 
                 <a href="/departments" class="nav-link {% if request.path == '/departments' %}active{% endif %}">
                     <i class="fas fa-building"></i>
